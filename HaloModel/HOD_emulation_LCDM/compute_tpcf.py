@@ -1,20 +1,12 @@
 import numpy as np 
 import h5py 
 import time 
-# from dq import Cosmology
-# import hmd # No GPU/TPU found 
-# from hmd.catalogue import ParticleCatalogue, HaloCatalogue, GalaxyCatalogue
-# from hmd.occupation import Zheng07Centrals, Zheng07Sats
-# from hmd.galaxy import Galaxy
-# from hmd.profiles import FixedCosmologyNFW # Initialize SigmaM emulator 
-# from hmd.populate import HODMaker
 from pathlib import Path
-from pycorr import TwoPointCorrelationFunction
 import pandas as pd
 import matplotlib.pyplot as plt
 
-# import warnings
-# warnings.filterwarnings("ignore")
+from pycorr import TwoPointCorrelationFunction
+from halotools.mock_observables import tpcf
 
 HOD_DATA_PATH = "/mn/stornext/d5/data/vetleav/HOD_AbacusData/c000_LCDM_simulation"
 HALO_ARRAYS_PATH = f"{HOD_DATA_PATH}/version0"
@@ -83,7 +75,7 @@ def read_csv_original():
     print(f"galaxy number density: {ng:.4e}")
 
 
-def compute_TPCF_fiducial_halocat():
+def compute_TPCF_fiducial_halocat(n_bins=128, threads=12):
     """
     fff.keys(): catalogue data, e.g. ['host_mass', 'host_id', 'x', 'y', 'z', 'v_x', 'v_y', 'v_z', ...]
     fff.attrs.keys(): HOD parameters, e.g. ['alpha', 'log10Mmin', 'ng', 'nc', ...]
@@ -96,27 +88,59 @@ def compute_TPCF_fiducial_halocat():
     y = np.array(fff['y'][:])
     z = np.array(fff['z'][:])
 
-    r_bin_edges = np.logspace(np.log10(1), np.log10(150), 512)
-    t0f = time.time()
+    r_bin_edges = np.logspace(np.log10(0.1), np.log10(130), n_bins)
+    t0 = time.time()
     result = TwoPointCorrelationFunction(
         mode='s',
         edges=r_bin_edges,
         data_positions1=np.array([x, y, z]),
         boxsize=2000.0,
         engine='corrfunc',
-        nthreads=64,
+        nthreads=threads,
     )
 
     r, xi = result(
         return_sep=True
     )
-    print(f"Time elapsed: {time.time() - t0f:.2f} s")
+    duration = time.time() - t0
     
-    # plt.plot(r, xi)
-    # plt.show()
+    print(f"Time elapsed: {duration:.2f} s")
+
+    return r, xi, duration
+
+def compute_TPCF_fiducial_halocat_halotools(n_bins=128, threads=12):
+    """
+    fff.keys(): catalogue data, e.g. ['host_mass', 'host_id', 'x', 'y', 'z', 'v_x', 'v_y', 'v_z', ...]
+    fff.attrs.keys(): HOD parameters, e.g. ['alpha', 'log10Mmin', 'ng', 'nc', ...]
+    
+    """
+    fff = h5py.File(f"{INDATAPATH}/halocat_fiducial.hdf5", "r")
+
+    x = np.array(fff['x'][:])
+    y = np.array(fff['y'][:])
+    z = np.array(fff['z'][:])
+
+    r_bin_edges = np.logspace(np.log10(0.1), np.log10(130), n_bins)
+
+    t0 = time.time()
+    xi = tpcf(
+        sample1=np.array([x, y, z]).T, # halotools requires shape (Npts, 3)
+        rbins=r_bin_edges,
+        period=2000.0,
+        num_threads=threads,
+    )
+
+    
+    duration = time.time() - t0
+    print(f"Time elapsed: {duration:.2f} s")
+
+    r_bin_centers = 0.5*(r_bin_edges[1:] + r_bin_edges[:-1])
+
+    return r_bin_centers, xi, duration
 
 
-def compute_TPCF_train_halocats(n_bins=128):
+
+def compute_TPCF_train_halocats_pycorr(n_bins=128):
     """
     Halo_file: halocatalogue file for training parameters 
      - halo_file.keys(): individual files, ['node0', 'node1', ..., 'nodeN']
@@ -158,7 +182,49 @@ def compute_TPCF_train_halocats(n_bins=128):
 
 
 
+def compute_TPCF_train_halocats_halotools(n_bins=128):
+    """
+    Halo_file: halocatalogue file for training parameters 
+     - halo_file.keys(): individual files, ['node0', 'node1', ..., 'nodeN']
+     - halo_file.attrs.keys(): cosmological parameters, e.g. ['H0', 'Om0', 'lnAs', 'n_s', ...]
+     - halo_file['nodex'].attrs.keys(): HOD parameters, e.g. ['alpha', 'log10Mmin', 'ng', 'nc', ...]
+     - halo_file['nodex'].keys(): catalogue data, e.g. ['host_radius', 'x', 'y', 'z', 'v_x', ...]
+    """
+
+    halo_file = h5py.File(f"{INDATAPATH}/halocat_train.hdf5", "r")
+    N_nodes = len(halo_file.keys())
+    print(f"Computing TPCF for {N_nodes} nodes...")
+    t0 = time.time()
+    for node_idx in range(N_nodes):
+        node_catalogue = halo_file[f"node{node_idx}"]
+        x = np.array(node_catalogue['x'][:])
+        y = np.array(node_catalogue['y'][:])
+        z = np.array(node_catalogue['z'][:])
+
+        t0i = time.time()
+
+        r_bin_edges = np.logspace(np.log10(0.1), np.log10(130), n_bins)
+        result = TwoPointCorrelationFunction(
+            mode='s',
+            edges=r_bin_edges,
+            data_positions1=np.array([x, y, z]),
+            boxsize=2000.0,
+            engine='corrfunc',
+            nthreads=128,
+        )
+        r, xi = result(return_sep=True)
+
+        print(f"Time elapsed for node{node_idx}: {time.time() - t0i:.2f} s")
+
+        outfile = f"{OUTDATAPATH}/TPCF_train_node{node_idx}_{n_bins}bins_halotools.npy"
+        np.save(outfile, np.array([r, xi]))
+
+
+    print(f"Total time elapsed: {time.time() - t0:.2f} s")
+
+
 # read_hdf5_files()
 # read_csv_original()
-# compute_TPCF_fiducial_halocat()
-compute_TPCF_train_halocats(n_bins=64)
+# compute_TPCF_fiducial_halocat(n_bins=64, threads=128)
+# compute_TPCF_fiducial_halocat_halotools(n_bins=64, threads=128)
+# compute_TPCF_train_halocats_halotools(n_bins=64)
