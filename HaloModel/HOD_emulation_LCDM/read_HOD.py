@@ -135,6 +135,6 @@ def make_csv_files():
 
 
 
-read_hdf5_files()
+# read_hdf5_files()
 # read_csv_original()
-# read_HOD_fiducial_hdf5()
+read_HOD_fiducial_hdf5()
