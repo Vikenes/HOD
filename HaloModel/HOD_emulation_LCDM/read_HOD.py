@@ -21,26 +21,30 @@ HALO_ARRAYS_PATH = f"{HOD_DATA_PATH}/version0"
 OUTFILEPATH = f"{HOD_DATA_PATH}/HOD_data"
 dataset_names = ['train', 'test', 'val']
 
-def read_hdf5_files():
+def read_hdf5_files(ng_fixed=False):
     ng_list = []
     nc_list = []
     ns_list = []
 
     for flag in dataset_names:
-        print(f"flag={flag}") 
-        fff = h5py.File(f"{OUTFILEPATH}/halocat_{flag}.hdf5", "r")
-        node_params_df = pd.read_csv(f"{HOD_DATA_PATH}/HOD_data/HOD_parameters_{flag}.csv")
+        # print(f"flag={flag}") 
+        if ng_fixed:
+            halocat_fname = f"halocat_{flag}_ng_fixed"
+            node_params_fname = f"HOD_parameters_ng_fixed_{flag}"
+        else:
+            halocat_fname = f"halocat_{flag}"
+            node_params_fname = f"HOD_parameters_{flag}"
+
+        fff = h5py.File(f"{OUTFILEPATH}/{halocat_fname}.hdf5", "r")
+        node_params_df = pd.read_csv(f"{HOD_DATA_PATH}/HOD_data/{node_params_fname}.csv")
 
         N_nodes = len(fff.keys())
         ng_flag = []
         nc_flag = []
         ns_flag = []
 
-        n1 = fff['node0']
-      
 
         for node_idx in range(N_nodes):
-            # print(f"Running node{node_idx}...", end=" ")
 
             HOD_group = fff[f"node{node_idx}"] 
 
@@ -54,15 +58,9 @@ def read_hdf5_files():
         # print(ng_flag)
         fff.close()
 
-        print("         ng       |log10Mmin|sigma_logM|log10M1|kappa|alpha")
-        for i in range(len(ng_flag)):
-            logM_min    = node_params_df['log10Mmin'].iloc[i]
-            sigma_logM  = node_params_df['sigma_logM'].iloc[i]
-            logM1       = node_params_df['log10M1'].iloc[i]
-            kappa       = node_params_df['kappa'].iloc[i]
-            alpha       = node_params_df['alpha'].iloc[i]
-            print(f"node{i}: {ng_flag[i]:.4e} | {logM_min:.4f} | {sigma_logM:.4f} | {logM1:.4f} | {kappa:.4f} | {alpha:.4f}")
-        exit()
+        # print("         ng       | nc | ns")
+        # for i in range(len(ng_flag)):
+            # print(f"node{i}: ng={ng_flag[i]:.4e} | nc={nc_flag[i]:.4e} | ns={ns_flag[i]:.4e}")
 
     # print("ng_list:", ng_list)
     # print("nc_list:", nc_list)
@@ -133,8 +131,10 @@ def make_csv_files():
         
         fff.close()
 
-
-
-# read_hdf5_files()
+print("No constraints on ng:")
+read_hdf5_files()
+print()
+print("Constraints on ng:")
+read_hdf5_files(ng_fixed=True)
 # read_csv_original()
-read_HOD_fiducial_hdf5()
+# read_HOD_fiducial_hdf5()

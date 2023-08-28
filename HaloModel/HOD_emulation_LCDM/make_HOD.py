@@ -20,18 +20,27 @@ HALO_ARRAYS_PATH = f"{HOD_DATA_PATH}/version0"
 OUTFILEPATH = f"{HOD_DATA_PATH}/HOD_data"
 dataset_names = ['train', 'test', 'val']
 
-def make_hdf5_files():
+def make_hdf5_files(ng_fixed=False):
 
     print("Making hdf5 files...")
 
     for flag in dataset_names:
         print(f"Computing for flag={flag}")
-        if Path((f"{OUTFILEPATH}/halocat_{flag}.hdf5")).exists():
-            print(f"File {OUTFILEPATH}/halocat_{flag}.hdf5 already exists, skipping...")
+        outfname = f"halocat_{flag}"
+        if ng_fixed:
+            outfname += "_ng_fixed"
+        OUTFILE = Path((f"{OUTFILEPATH}/{outfname}.hdf5"))
+        if OUTFILE.exists():
+            print(f"File {OUTFILE} already exists, skipping...")
             continue
 
-        fff = h5py.File(f"{OUTFILEPATH}/halocat_{flag}.hdf5", "w")
-        node_params_df = pd.read_csv(f"{HOD_DATA_PATH}/HOD_data/HOD_parameters_{flag}.csv")
+        fff = h5py.File(f"{OUTFILEPATH}/{outfname}.hdf5", "w")
+        if ng_fixed:
+            hod_params_fname = f"{HOD_DATA_PATH}/HOD_data/HOD_parameters_ng_fixed_{flag}.csv"
+        else:
+            hod_params_fname = f"{HOD_DATA_PATH}/HOD_data/HOD_parameters_{flag}.csv"
+
+        node_params_df = pd.read_csv(hod_params_fname)
 
         cosmology = Cosmology.from_custom(run=0, emulator_data_path=HOD_DATA_PATH)
 
@@ -257,5 +266,5 @@ def make_csv_files():
 
 
 
-make_hdf5_files()
+make_hdf5_files(ng_fixed=True)
 # make_HOD_fiducial()
