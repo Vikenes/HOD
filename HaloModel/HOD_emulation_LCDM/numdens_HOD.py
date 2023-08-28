@@ -105,7 +105,14 @@ def compute_ng_analytical(log10Mmin, sigma_logM, log10M1, kappa, alpha, mass_cen
     return simpson(integrand, mass_center)
 
 
-def estimate_log10Mmin_from_gal_num_density(ng_desired=2.174e-4, flag="train"):
+def estimate_log10Mmin_from_gal_num_density(
+        sigma_logM_array=None,
+        log10M1_array=None,
+        kappa_array=None,
+        alpha_array=None,
+        ng_desired=2.174e-4, 
+        test=False,
+        ):
 
 
     ### Make halo catalogue 
@@ -139,17 +146,26 @@ def estimate_log10Mmin_from_gal_num_density(ng_desired=2.174e-4, flag="train"):
     # Estimate ng from halo catalogue
     N_Mmin = 200
     log10Mmin_arr = np.linspace(13.4, 13.9, N_Mmin) # Range yields ng values around 2.174e-4 for all parameter sets
-    node_params_df = pd.read_csv(f"{HOD_DATA_PATH}/HOD_data/HOD_parameters_{flag}.csv")
-    N_params = len(node_params_df)
+    
+    if test:
+        ### FIDUCIAL VALUES. From https://arxiv.org/pdf/2208.05218.pdf, Table 3  ###
+        # For testing purposes mainly. 
+        sigma_logM_array = np.array([0.6915])
+        log10M1_array    = np.array([14.42])
+        kappa_array      = np.array([0.51])
+        alpha_array      = np.array([0.9168])
+
+
+    N_params = len(sigma_logM_array)
     log10Mmin_best_fit = np.zeros(N_params)
 
     # Loop through parameter sets and estimate log10Mmin that yields ng = ng_desired
     for i in range(N_params):
         ng_arr = np.zeros_like(log10Mmin_arr)
-        sigma_logM  = node_params_df['sigma_logM'].iloc[i]
-        log10M1     = node_params_df['log10M1'].iloc[i]
-        kappa       = node_params_df['kappa'].iloc[i]
-        alpha       = node_params_df['alpha'].iloc[i]
+        sigma_logM  = sigma_logM_array[i]
+        log10M1     = log10M1_array[i]
+        kappa       = kappa_array[i]
+        alpha       = alpha_array[i]
 
         # Compute ng for for all log10Mmin
         for j in range(N_Mmin):
@@ -168,13 +184,16 @@ def estimate_log10Mmin_from_gal_num_density(ng_desired=2.174e-4, flag="train"):
 
         # Compute ng for best fit log10Mmin, to check if it is close to ng_desired
         ng_best_fit_spline = compute_ng_analytical(log10Mmin_best_fit_spline, sigma_logM, log10M1, kappa, alpha, mass_center, dn_dM)
+        if test:
+            print(f"Best fit [{i:2.0f}]: ng: {ng_best_fit_spline:.4e} | log10Mmin: {log10Mmin_best_fit_spline:.4f} | rel.diff. ng: {np.abs(1.0 - ng_best_fit_spline / ng_desired):.6e}")
 
-        print(f"Best fit [{i:2.0f}]: ng: {ng_best_fit_spline:.4e} | log10Mmin: {log10Mmin_best_fit_spline:.4f} | rel.diff. ng: {np.abs(1.0 - ng_best_fit_spline / ng_desired):.6e}")
+    return log10Mmin_best_fit
 
 
 
-
-
+if __name__ == "__main__":
+    compute_gal_num_density()
+    estimate_log10Mmin_from_gal_num_density(test=True)
 # compute_gal_num_density()
 # constrain_ng_fiducial()
-estimate_log10Mmin_from_gal_num_density()
+# estimate_log10Mmin_from_gal_num_density()
