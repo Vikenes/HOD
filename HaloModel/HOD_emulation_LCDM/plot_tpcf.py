@@ -64,7 +64,10 @@ def plot_TPCF_train_halocats_interval(interval=5, n_bins=128):
 
         if (i+1) % interval == 0 or i == 49:
             node_range = f"{i-interval+1}-{i}"
-            ax.set_title(rf"TPCF computed from {n_bins} values of $r\in[0.1,\,130]$, for samples ${node_range}$.")
+            fig_title = rf"TPCF computed from {n_bins} values of $r\in[0.1,\,130]$, for samples ${node_range}$."
+            if NG_FIXED:
+                fig_title += r" ($\bar{n}_g$ fixed)"
+            ax.set_title(fig_title)
             # xi_mean = np.mean(xi_all, axis=0)
             xi_bar = compute_TPCF_average(n_bins=n_bins)
             ax.plot(r, xi_bar, color='k', label=rf"$\bar{{\xi}}(r)$")
@@ -107,7 +110,10 @@ def plot_xi_over_xi_bar(interval=5, n_bins=128):
             # xi_mean = np.mean(xi_all, axis=0)
             # ax.plot(r, xi_mean, color='k', label=r"$\bar{\xi}(r)$")
             # xi_all = []
-            ax.set_title(f"TPCF ratio from {n_bins} values of $r\in[0.1,\,130]$, for samples ${node_range}$.")
+            fig_title = f"TPCF ratio from {n_bins} values of $r\in[0.1,\,130]$, for samples ${node_range}$"
+            if NG_FIXED:
+                fig_title += r" ($\bar{n}_g$ fixed)"
+            ax.set_title(fig_title)
 
             ax.set_yscale('log')
             ax.set_xscale('log')
