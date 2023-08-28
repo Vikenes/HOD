@@ -20,14 +20,21 @@ INDATAPATH = Path(f"{HOD_DATA_PATH}/data_measurements")
 FIGPATH = "plots"
 
 global SAVE
-SAVE = True
+global NG_FIXED
+SAVE = False
+NG_FIXED = False
 
 def compute_TPCF_average(n_bins=128):
     # xi_all = []
     # for i, npy_file in enumerate(INDATAPATH.glob(f"TPCF_train_node*_{n_bins}bins.npy")):
         # xi_all.append(np.load(npy_file)[1])
 
-    xi_bar = np.mean([np.load(npy_file)[1] for npy_file in INDATAPATH.glob(f"TPCF_train_node*_{n_bins}bins.npy")], axis=0)
+    if NG_FIXED:
+        npy_files = f"TPCF_train_node*_{n_bins}bins_ng_fixed.npy"
+    else:
+        npy_files = f"TPCF_train_node*_{n_bins}bins.npy"
+
+    xi_bar = np.mean([np.load(npy_file)[1] for npy_file in INDATAPATH.glob(npy_files)], axis=0)
     return xi_bar
 
 
@@ -41,7 +48,11 @@ def plot_TPCF_train_halocats_interval(interval=5, n_bins=128):
     """
     fig, ax = plt.subplots(1, 1, figsize=(8, 6))
     # xi_all = []
-    for i, npy_file in enumerate(INDATAPATH.glob(f"TPCF_train_node*_{n_bins}bins.npy")):
+    if NG_FIXED:
+        npy_files = f"TPCF_train_node*_{n_bins}bins_ng_fixed.npy"
+    else:
+        npy_files = f"TPCF_train_node*_{n_bins}bins.npy"
+    for i, npy_file in enumerate(INDATAPATH.glob(npy_files)):
         # tpcf_filename = f"{INDATAPATH}/TPCF_train_node{node_idx}.npy"
 
         r, xi = np.load(npy_file)
@@ -63,7 +74,10 @@ def plot_TPCF_train_halocats_interval(interval=5, n_bins=128):
             ax.set_xlabel(r"$r\: [h^{-1} \mathrm{Mpc}]$")
             plt.legend()
             if SAVE:
-                plt.savefig(f"{FIGPATH}/TPCF_train_node{node_range}_{n_bins}bins.png", dpi=300)
+                figname = f"TPCF_train_node{node_range}_{n_bins}bins"
+                if NG_FIXED:
+                    figname += "_ng_fixed"
+                plt.savefig(f"{FIGPATH}/{figname}.png", dpi=300)
             else:
                 plt.show()
             fig, ax = plt.subplots(1, 1, figsize=(8, 6))     
@@ -75,8 +89,12 @@ def plot_xi_over_xi_bar(interval=5, n_bins=128):
     fig, ax = plt.subplots(1, 1, figsize=(8, 6))
 
     xi_bar = compute_TPCF_average(n_bins=n_bins)
+    if NG_FIXED:
+        npy_files = f"TPCF_train_node*_{n_bins}bins_ng_fixed.npy"
+    else:
+        npy_files = f"TPCF_train_node*_{n_bins}bins.npy"
 
-    for i, npy_file in enumerate(INDATAPATH.glob(f"TPCF_train_node*_{n_bins}bins.npy")):
+    for i, npy_file in enumerate(INDATAPATH.glob(npy_files)):
         r, xi = np.load(npy_file)
         if interval>10:
             ax.plot(r, xi/xi_bar, '--', alpha=0.6)
@@ -98,7 +116,11 @@ def plot_xi_over_xi_bar(interval=5, n_bins=128):
             if interval <= 10:
                 plt.legend()
             if SAVE:
-                plt.savefig(f"{FIGPATH}/TPCF_train_node{node_range}_{n_bins}bins_ratio.png", dpi=300)
+                figname = f"TPCF_train_node{node_range}_{n_bins}bins_ratio"
+                if NG_FIXED:
+                    figname += "_ng_fixed"
+
+                plt.savefig(f"{FIGPATH}/{figname}.png", dpi=300)
             else:
                 plt.show()
             fig, ax = plt.subplots(1, 1, figsize=(8, 6)) 
@@ -117,7 +139,7 @@ def plot_xi_over_xi_bar(interval=5, n_bins=128):
 
 
 
-
-
-plot_xi_over_xi_bar(interval=25, n_bins=64)
+SAVE = True
+NG_FIXED = True
 plot_TPCF_train_halocats_interval(interval=25, n_bins=64)
+plot_xi_over_xi_bar(interval=25, n_bins=64)
