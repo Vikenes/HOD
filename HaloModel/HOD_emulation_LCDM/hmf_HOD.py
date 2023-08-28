@@ -9,11 +9,14 @@ from hmd.galaxy import Galaxy
 from hmd.profiles import FixedCosmologyNFW
 from hmd.populate import HODMaker
 from pathlib import Path
+from scipy import special
+from scipy.integrate import simpson
 import pandas as pd
 
 import matplotlib.pyplot as plt
-# import warnings
-# warnings.filterwarnings("ignore")
+
+import warnings
+warnings.filterwarnings("ignore", message='Astropy cosmology class contains massive neutrinos, which are not taken into account in Colossus.')
 
 HOD_DATA_PATH = "/mn/stornext/d5/data/vetleav/HOD_AbacusData/c000_LCDM_simulation"
 HALO_ARRAYS_PATH = f"{HOD_DATA_PATH}/version0"
@@ -21,7 +24,7 @@ HALO_ARRAYS_PATH = f"{HOD_DATA_PATH}/version0"
 OUTFILEPATH = f"{HOD_DATA_PATH}/HOD_data"
 dataset_names = ['train', 'test', 'val']
 
-def make_HOD_fiducial():
+def compute_gal_num_density():
 
     log10Mmin   = 13.62 # h^-1 Msun
     sigma_logM  = 0.6915
@@ -48,81 +51,47 @@ def make_HOD_fiducial():
         cosmology=cosmology,
         redshift=redshift,
         )
-    N = 100
+    N = 250
     mmin = np.log10(np.min(mass))
     mmax = np.log10(np.max(mass))
     mass_edges = np.logspace(mmin, mmax, N)
-    hmf = halocat.compute_hmf(mass_edges)
+    dn_dM = halocat.compute_hmf(mass_edges)
     mass_center = 0.5 * (mass_edges[1:] + mass_edges[:-1])
-    dn_dM = hmf / mass_center
 
-    galaxy=Galaxy(
-            logM_min    = node_params[0],
-            sigma_logM  = node_params[1],
-            logM1       = node_params[2],
-            kappa       = node_params[3],
-            alpha       = node_params[4],
+  
+
+    Nc = 0.5 * special.erfc(np.log10(10**node_params[0] / mass_center) / node_params[1])
+    mask = mass_center > node_params[3] * 10**node_params[0]
+    lambda_values = np.zeros_like(mass_center)
+    lambda_values[mask] = ((mass_center[mask] - node_params[3] * 10**node_params[0]) / 10**node_params[2])**node_params[4]
+
+    Ns = Nc * lambda_values
+    Ng = Nc + Ns
+
+    integrand = dn_dM * Ng
+    dM = mass_center[1] - mass_center[0]
+
+
+
+    fff = h5py.File(f"{OUTFILEPATH}/halocat_fiducial.hdf5", "r")
+    ng_estimated = fff.attrs['ng']
+    nc_estimated = fff.attrs['nc']
+    ns_estimated = fff.attrs['ns']
+
+    ng_analytical = simpson(integrand, mass_center, dx=dM)
+    nc_analytical = simpson(dn_dM * Nc, mass_center, dx=dM)   
+    ns_analytical = simpson(dn_dM * Ns, mass_center, dx=dM) 
+
+
+    print("       estimated | analytical | difference")
+    print(f"ng_bar: {ng_estimated:.4e} | {ng_analytical:.4e} | {np.abs(ng_estimated - ng_analytical):.4e} ")
+    print(f"nc_bar: {nc_estimated:.4e} | {nc_analytical:.4e} | {np.abs(nc_estimated - nc_analytical):.4e} ")
+    print(f"ns_bar: {ns_estimated:.4e} | {ns_analytical:.4e} | {np.abs(ns_estimated - ns_analytical):.4e} ")
     
-        ),
-    
-    Nc_occ = Zheng07Centrals().get_n(halo_mass=mass_center, galaxy=galaxy)
-    Ns_occ = Zheng07Sats().get_n(halo_mass=mass_center, galaxy=galaxy)
-
-    print(Nc_occ.shape)
-    print(Ns_occ.shape)
-    exit()
-
-
-    print(f"Running Fiducial...", end=" ")
-    t0 = time.time()
-
-
-    maker = HODMaker(
-        halo_catalogue=halocat,
-        central_occ=Zheng07Centrals(),
-        sat_occ=Zheng07Sats(),
-        satellite_profile=FixedCosmologyNFW(
-            cosmology=halocat.cosmology,
-            redshift=redshift,
-            mdef="200m",
-            conc_mass_model="dutton_maccio14",
-            sigmaM=None,
-        ),
-        galaxy=Galaxy(
-            logM_min    = node_params[0],
-            sigma_logM  = node_params[1],
-            logM1       = node_params[2],
-            kappa       = node_params[3],
-            alpha       = node_params[4],
-    
-        ),
-    )
-
-    maker()
-
-    Nc_occ = maker.get_central_df()
-    print(Nc_occ.keys())
-    exit()
-    Ns_occ = maker.get_satellite_df()
-
-    galaxy_df = maker.galaxy_df
-    galaxy_df_central = galaxy_df[galaxy_df['galaxy_type'] == 'central']
-    galaxy_df_satellite = galaxy_df[galaxy_df['galaxy_type'] == 'satellite']
-    Ng = len(galaxy_df)
-    Nc = len(galaxy_df_central)
-    Ns = len(galaxy_df_satellite)
-    ng = Ng / (boxsize**3)
-    nc = Nc / (boxsize**3)
-    ns = Ns / (boxsize**3)
-   
-
-    galaxy_df['galaxy_type'] = galaxy_df['galaxy_type'].replace(["central"], 0)
-    galaxy_df['galaxy_type'] = galaxy_df['galaxy_type'].replace(["satellite"], 1)
-    galaxy_df.astype({'galaxy_type': int})
-    galaxy_properties = galaxy_df.columns.values.tolist()
-
-    print(f"Finised, took {time.time() - t0:.2f} seconds.")
 
 
 
-make_HOD_fiducial()
+
+
+
+compute_gal_num_density()
