@@ -141,7 +141,6 @@ def plot_xi_over_xi_bar(interval=5, n_bins=128):
     # ax.plot(r, xi_mean, color='k', label=r"$\bar{\xi}(r)$")
     plt.close()       
 
-   
 
 
 

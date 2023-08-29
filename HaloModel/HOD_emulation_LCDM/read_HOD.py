@@ -70,6 +70,24 @@ def read_hdf5_files(ng_fixed=False):
     print(f" test:  {np.mean(ng_list[1]):.4e} +/- {np.std(ng_list[1]):.4e}")
     print(f" val:   {np.mean(ng_list[2]):.4e} +/- {np.std(ng_list[2]):.4e}")
 
+def print_HOD_parameters(flag, ng_fixed=True, print_every_n=5):
+    HOD_params_path = OUTFILEPATH
+    if ng_fixed:
+        outfile = f"{HOD_params_path}/HOD_parameters_ng_fixed_{flag}.csv"
+    else:
+        outfile = f"{HOD_params_path}/HOD_parameters_{flag}.csv"
+    df = pd.read_csv(outfile)
+    print("     sigma_logM | alpha  | kappa  | log10M1 ")
+    for i in range(len(df)):
+        sigma_logM = df["sigma_logM"][i]
+        alpha = df["alpha"][i]
+        kappa = df["kappa"][i]
+        log10M1 = df["log10M1"][i]
+        print(f"node{i}: {sigma_logM:8.4f} | {alpha:.4f} | {kappa:.4f} | {log10M1:.4f}")
+        if (i+1) % print_every_n == 0:
+            input()
+            print("     sigma_logM | alpha  | kappa  | log10M1 ")
+
 
 
 def read_csv_original():
@@ -131,10 +149,12 @@ def make_csv_files():
         
         fff.close()
 
-print("No constraints on ng:")
-read_hdf5_files()
-print()
-print("Constraints on ng:")
-read_hdf5_files(ng_fixed=True)
+# print("No constraints on ng:")
+# read_hdf5_files()
+# print()
+# print("Constraints on ng:")
+# read_hdf5_files(ng_fixed=True)
 # read_csv_original()
 # read_HOD_fiducial_hdf5()
+
+print_HOD_parameters("train", ng_fixed=True)

@@ -90,10 +90,17 @@ def compute_TPCF_train_halocats_pycorr(n_bins=128, ng_fixed=False):
      - halo_file['nodex'].keys(): catalogue data, e.g. ['host_radius', 'x', 'y', 'z', 'v_x', ...]
     """
 
-    halo_file = h5py.File(f"{INDATAPATH}/halocat_train.hdf5", "r")
+    halocat_fname = f"halocat_train"
+    if ng_fixed:
+        halocat_fname += "_ng_fixed"
+
+    halo_file = h5py.File(f"{INDATAPATH}/{halocat_fname}.hdf5", "r")
     N_nodes = len(halo_file.keys())
+    r_bin_edges = np.logspace(np.log10(0.1), np.log10(130), n_bins)
+    
     print(f"Computing TPCF for {N_nodes} nodes...")
     t0 = time.time()
+    
     for node_idx in range(N_nodes):
         node_catalogue = halo_file[f"node{node_idx}"]
         x = np.array(node_catalogue['x'][:])
@@ -102,7 +109,6 @@ def compute_TPCF_train_halocats_pycorr(n_bins=128, ng_fixed=False):
 
         t0i = time.time()
 
-        r_bin_edges = np.logspace(np.log10(0.1), np.log10(130), n_bins)
         result = TwoPointCorrelationFunction(
             mode='s',
             edges=r_bin_edges,
@@ -118,15 +124,15 @@ def compute_TPCF_train_halocats_pycorr(n_bins=128, ng_fixed=False):
             outfile = f"{OUTDATAPATH}/TPCF_train_node{node_idx}_{n_bins}bins_ng_fixed.npy"
         else:
             outfile = f"{OUTDATAPATH}/TPCF_train_node{node_idx}_{n_bins}bins.npy"
-        if Path(outfile).exists():
-            print(f"File {outfile} already exists, skipping...")
-            continue
+        # if Path(outfile).exists():
+            # print(f"File {outfile} already exists, skipping...")
+            # continue
         np.save(outfile, np.array([r, xi]))
 
 
     print(f"Total time elapsed: {time.time() - t0:.2f} s")
 
-
+# def compute_TPCF_halomodel()
 
 # compute_TPCF_fiducial_halocat(n_bins=64, threads=128)
 # compute_TPCF_fiducial_halocat_halotools(n_bins=64, threads=128)
