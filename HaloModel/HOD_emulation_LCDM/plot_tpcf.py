@@ -25,14 +25,8 @@ SAVE = False
 NG_FIXED = False
 
 def compute_TPCF_average(n_bins=128):
-    # xi_all = []
-    # for i, npy_file in enumerate(INDATAPATH.glob(f"TPCF_train_node*_{n_bins}bins.npy")):
-        # xi_all.append(np.load(npy_file)[1])
-
-    if NG_FIXED:
-        npy_files = f"TPCF_train_node*_{n_bins}bins_ng_fixed.npy"
-    else:
-        npy_files = f"TPCF_train_node*_{n_bins}bins.npy"
+    
+    npy_files = f"TPCF_train_node*_{n_bins}bins*.npy"
 
     xi_bar = np.mean([np.load(npy_file)[1] for npy_file in INDATAPATH.glob(npy_files)], axis=0)
     return xi_bar
@@ -47,34 +41,32 @@ def plot_TPCF_train_halocats_interval(interval=5, n_bins=128):
      - halo_file['nodex'].keys(): catalogue data, e.g. ['host_radius', 'x', 'y', 'z', 'v_x', ...]
     """
     fig, ax = plt.subplots(1, 1, figsize=(8, 6))
-    # xi_all = []
-    if NG_FIXED:
-        npy_files = f"TPCF_train_node*_{n_bins}bins_ng_fixed.npy"
-    else:
-        npy_files = f"TPCF_train_node*_{n_bins}bins.npy"
+
+    npy_files = f"TPCF_train_node*_{n_bins}bins*.npy"
+
     for i, npy_file in enumerate(INDATAPATH.glob(npy_files)):
-        # tpcf_filename = f"{INDATAPATH}/TPCF_train_node{node_idx}.npy"
 
         r, xi = np.load(npy_file)
-        # xi_all.append(xi)
+
         if interval>10:
-            ax.plot(r, xi, '--', alpha=0.6)
+            ax.plot(r, xi, 'o-', ms=2, lw=0.7, alpha=0.6)
         else:
             ax.plot(r, xi, '--', alpha=0.6, label=f"node{i}")
 
         if (i+1) % interval == 0 or i == 49:
             node_range = f"{i-interval+1}-{i}"
-            fig_title = rf"TPCF computed from {n_bins} values of $r\in[0.1,\,130]$, for samples ${node_range}$."
+            fig_title = rf"TPCF, subsamples ${node_range}$"
             if NG_FIXED:
-                fig_title += r" ($\bar{n}_g$ fixed)"
+                fig_title += r" with fixed $\bar{n}_g$"
             ax.set_title(fig_title)
-            # xi_mean = np.mean(xi_all, axis=0)
+
             xi_bar = compute_TPCF_average(n_bins=n_bins)
-            ax.plot(r, xi_bar, color='k', label=rf"$\bar{{\xi}}(r)$")
+            ax.plot(r, xi_bar, color='k', label=rf"$\bar{{\xi}}_{{gg}}(r)$")
             ax.set_yscale('log')
             ax.set_xscale('log')
-            ax.set_ylabel(r"$\xi(r)$")
+            ax.set_ylabel(r"$\xi_{gg}(r)$")
             ax.set_xlabel(r"$r\: [h^{-1} \mathrm{Mpc}]$")
+            ax.set_ylim(1e-3, 1e6)
             plt.legend()
             if SAVE:
                 figname = f"TPCF_train_node{node_range}_{n_bins}bins"
@@ -92,32 +84,26 @@ def plot_xi_over_xi_bar(interval=5, n_bins=128):
     fig, ax = plt.subplots(1, 1, figsize=(8, 6))
 
     xi_bar = compute_TPCF_average(n_bins=n_bins)
-    if NG_FIXED:
-        npy_files = f"TPCF_train_node*_{n_bins}bins_ng_fixed.npy"
-    else:
-        npy_files = f"TPCF_train_node*_{n_bins}bins.npy"
+    npy_files = f"TPCF_train_node*_{n_bins}bins*.npy"
 
     for i, npy_file in enumerate(INDATAPATH.glob(npy_files)):
         r, xi = np.load(npy_file)
         if interval>10:
-            ax.plot(r, xi/xi_bar, '--', alpha=0.6)
+            ax.plot(r, xi/xi_bar, '-o', ms=2, alpha=0.6)
         else:
             ax.plot(r, xi/xi_bar, '--', alpha=0.6, label=f"node{i}")
 
         if (i+1) % interval == 0 or i == 49:
             node_range = f"{i-interval+1}-{i}"
 
-            # xi_mean = np.mean(xi_all, axis=0)
-            # ax.plot(r, xi_mean, color='k', label=r"$\bar{\xi}(r)$")
-            # xi_all = []
-            fig_title = f"TPCF ratio from {n_bins} values of $r\in[0.1,\,130]$, for samples ${node_range}$"
+            fig_title = f"TPCF-ratio, subsamples ${node_range}$"
             if NG_FIXED:
-                fig_title += r" ($\bar{n}_g$ fixed)"
+                fig_title += r" with fixed $\bar{n}_g$"
             ax.set_title(fig_title)
 
             ax.set_yscale('log')
             ax.set_xscale('log')
-            ax.set_ylabel(r"$\xi(r)/\bar{\xi}(r)$")
+            ax.set_ylabel(r"$\xi_{gg}(r)/\bar{\xi}_{gg}(r)$")
             ax.set_xlabel(r"$r\: [h^{-1} \mathrm{Mpc}]$")
             if interval <= 10:
                 plt.legend()
@@ -146,5 +132,5 @@ def plot_xi_over_xi_bar(interval=5, n_bins=128):
 
 SAVE = True
 NG_FIXED = True
-plot_TPCF_train_halocats_interval(interval=25, n_bins=64)
-plot_xi_over_xi_bar(interval=25, n_bins=64)
+plot_TPCF_train_halocats_interval(interval=25, n_bins=115)
+plot_xi_over_xi_bar(interval=25, n_bins=115)

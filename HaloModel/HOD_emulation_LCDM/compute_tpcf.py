@@ -13,6 +13,7 @@ HALO_ARRAYS_PATH = f"{HOD_DATA_PATH}/version0"
 
 INDATAPATH = f"{HOD_DATA_PATH}/HOD_data"
 OUTDATAPATH = f"{HOD_DATA_PATH}/data_measurements"
+RBINSPATH = f"{HOD_DATA_PATH}/TPCF_r_bins_tests"
 dataset_names = ['train', 'test', 'val']
 
 
@@ -96,12 +97,24 @@ def compute_TPCF_train_halocats_pycorr(n_bins=128, ng_fixed=False):
 
     halo_file = h5py.File(f"{INDATAPATH}/{halocat_fname}.hdf5", "r")
     N_nodes = len(halo_file.keys())
-    r_bin_edges = np.logspace(np.log10(0.1), np.log10(130), n_bins)
+    # r_bin_edges = np.logspace(np.log10(0.1), np.log10(130), n_bins)
+    r_bins_log = np.logspace(np.log10(0.01), np.log10(5), 40, endpoint=False)
+    r_bins_lin = np.linspace(5.0, 150.0, 75)
+    r_bin_edges = np.concatenate((r_bins_log, r_bins_lin))
+    n_bins = len(r_bin_edges)
     
     print(f"Computing TPCF for {N_nodes} nodes...")
     t0 = time.time()
     
     for node_idx in range(N_nodes):
+        if ng_fixed:
+            outfile = f"{OUTDATAPATH}/TPCF_train_node{node_idx}_{n_bins}bins_ng_fixed.npy"
+        else:
+            outfile = f"{OUTDATAPATH}/TPCF_train_node{node_idx}_{n_bins}bins.npy"
+        if Path(outfile).exists():
+            print(f"File {outfile} already exists, skipping...")
+            continue
+
         node_catalogue = halo_file[f"node{node_idx}"]
         x = np.array(node_catalogue['x'][:])
         y = np.array(node_catalogue['y'][:])
@@ -120,19 +133,11 @@ def compute_TPCF_train_halocats_pycorr(n_bins=128, ng_fixed=False):
         r, xi = result(return_sep=True)
 
         print(f"Time elapsed for node{node_idx}: {time.time() - t0i:.2f} s")
-        if ng_fixed:
-            outfile = f"{OUTDATAPATH}/TPCF_train_node{node_idx}_{n_bins}bins_ng_fixed.npy"
-        else:
-            outfile = f"{OUTDATAPATH}/TPCF_train_node{node_idx}_{n_bins}bins.npy"
-        # if Path(outfile).exists():
-            # print(f"File {outfile} already exists, skipping...")
-            # continue
         np.save(outfile, np.array([r, xi]))
 
 
     print(f"Total time elapsed: {time.time() - t0:.2f} s")
 
-# def compute_TPCF_halomodel()
 
 # compute_TPCF_fiducial_halocat(n_bins=64, threads=128)
 # compute_TPCF_fiducial_halocat_halotools(n_bins=64, threads=128)
