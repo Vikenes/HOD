@@ -1,6 +1,7 @@
 import numpy as np 
 import h5py 
 import time 
+import sys 
 from dq import Cosmology
 import hmd
 from hmd.catalogue import ParticleCatalogue, HaloCatalogue, GalaxyCatalogue
@@ -17,7 +18,7 @@ import pandas as pd
 HOD_DATA_PATH = "/mn/stornext/d5/data/vetleav/HOD_AbacusData/c000_LCDM_simulation"
 HALO_ARRAYS_PATH = f"{HOD_DATA_PATH}/version0"
 
-OUTFILEPATH = f"{HOD_DATA_PATH}/individual_HOD_parameter_variation"
+
 
 dataset_names = [
     'sigma_logM', 
@@ -25,19 +26,23 @@ dataset_names = [
     'kappa',
     'alpha']
 
-def make_hdf5_files(ng_fixed=False):
+def make_hdf5_files(subfolder, overwrite=False):
+    
+    OUTFILEPATH = f"{HOD_DATA_PATH}/individual_HOD_parameter_variation/{subfolder}"
+    Path(OUTFILEPATH).mkdir(parents=True, exist_ok=True)
 
     print("Making hdf5 files...")
 
     for param in dataset_names:
         print(f"Computing for param={param}")
         outfname = f"halocat_vary_{param}"
-        OUTFILE = Path((f"{OUTFILEPATH}/{outfname}.hdf5"))
-        if OUTFILE.exists():
+
+        OUTFILE = f"{OUTFILEPATH}/{outfname}.hdf5"
+        if Path(OUTFILE).exists() and not overwrite:
             print(f"File {OUTFILE} already exists, skipping...")
             continue
 
-        fff = h5py.File(f"{OUTFILEPATH}/{outfname}.hdf5", "w")
+        fff = h5py.File(f"{OUTFILE}", "w")
 
         hod_params_fname = f"{OUTFILEPATH}/HOD_parameters_vary_{param}.csv"
 
@@ -138,5 +143,10 @@ def make_hdf5_files(ng_fixed=False):
         fff.close()
 
 
-make_hdf5_files(ng_fixed=True)
-# make_HOD_fiducial()
+if len(sys.argv) == 2 or len(sys.argv) == 3:
+    subfolder = sys.argv[1]
+    overwrite = bool(sys.argv[2]) if len(sys.argv) == 3 else False
+    make_hdf5_files(subfolder=subfolder,
+                    overwrite=overwrite)
+else:
+    raise ValueError("Need to specify subfolder")
