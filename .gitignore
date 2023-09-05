@@ -5,7 +5,7 @@
 *.npy
 *.csv
 
-HaloModel/individual_HOD_parameter_variation/test.sh # Testing 
+test.sh # Testing 
 
 ### C++ ###
 # Prerequisites
