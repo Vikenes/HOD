@@ -32,7 +32,7 @@ def compute_TPCF_average(n_bins=128):
     return xi_bar
 
 
-def plot_TPCF_train_halocats_interval(interval=5, n_bins=128):
+def plot_TPCF_train_halocats_interval(interval=5, n_bins=128, mask=False):
     """
     Halo_file: halocatalogue file for training parameters 
      - halo_file.keys(): individual files, ['node0', 'node1', ..., 'nodeN']
@@ -42,11 +42,22 @@ def plot_TPCF_train_halocats_interval(interval=5, n_bins=128):
     """
     fig, ax = plt.subplots(1, 1, figsize=(8, 6))
 
+    xi_bar = compute_TPCF_average(n_bins=n_bins)
+
+
     npy_files = f"TPCF_train_node*_{n_bins}bins*.npy"
 
     for i, npy_file in enumerate(INDATAPATH.glob(npy_files)):
 
         r, xi = np.load(npy_file)
+        if mask:
+            r_mask_low_limit = r > 0.6 
+            r_mask_high_limit = r < 60
+            r_mask = r_mask_low_limit * r_mask_high_limit
+
+            r = r[r_mask]
+            xi = xi[r_mask]
+            xi_bar = xi_bar[r_mask] if i == 0 else xi_bar
 
         if interval>10:
             ax.plot(r, xi, 'o-', ms=2, lw=0.7, alpha=0.6)
@@ -60,7 +71,7 @@ def plot_TPCF_train_halocats_interval(interval=5, n_bins=128):
                 fig_title += r" with fixed $\bar{n}_g$"
             ax.set_title(fig_title)
 
-            xi_bar = compute_TPCF_average(n_bins=n_bins)
+            
             ax.plot(r, xi_bar, color='k', label=rf"$\bar{{\xi}}_{{gg}}(r)$")
             ax.set_yscale('log')
             ax.set_xscale('log')
@@ -80,14 +91,23 @@ def plot_TPCF_train_halocats_interval(interval=5, n_bins=128):
     plt.close()       
             
 
-def plot_xi_over_xi_bar(interval=5, n_bins=128):
+def plot_xi_over_xi_bar(interval=5, n_bins=128, mask=False):
     fig, ax = plt.subplots(1, 1, figsize=(8, 6))
 
     xi_bar = compute_TPCF_average(n_bins=n_bins)
+
     npy_files = f"TPCF_train_node*_{n_bins}bins*.npy"
 
     for i, npy_file in enumerate(INDATAPATH.glob(npy_files)):
         r, xi = np.load(npy_file)
+        if mask:
+            r_mask_low_limit = r > 0.6 
+            r_mask_high_limit = r < 60
+            r_mask = r_mask_low_limit * r_mask_high_limit
+
+            r = r[r_mask]
+            xi = xi[r_mask]
+            xi_bar = xi_bar[r_mask] if i == 0 else xi_bar
         if interval>10:
             ax.plot(r, xi/xi_bar, '-o', ms=2, alpha=0.6)
         else:
@@ -130,7 +150,7 @@ def plot_xi_over_xi_bar(interval=5, n_bins=128):
 
 
 
-SAVE = True
+SAVE = False
 NG_FIXED = True
-plot_TPCF_train_halocats_interval(interval=25, n_bins=115)
-plot_xi_over_xi_bar(interval=25, n_bins=115)
+plot_TPCF_train_halocats_interval(interval=25, n_bins=115, mask=True)
+# plot_xi_over_xi_bar(interval=25, n_bins=115, mask=True)
