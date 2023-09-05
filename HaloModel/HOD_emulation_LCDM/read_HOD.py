@@ -149,12 +149,12 @@ def make_csv_files():
         
         fff.close()
 
-# print("No constraints on ng:")
-# read_hdf5_files()
-# print()
-# print("Constraints on ng:")
-# read_hdf5_files(ng_fixed=True)
+print("No constraints on ng:")
+read_hdf5_files()
+print()
+print("Constraints on ng:")
+read_hdf5_files(ng_fixed=True)
 # read_csv_original()
 # read_HOD_fiducial_hdf5()
 
-print_HOD_parameters("train", ng_fixed=True)
+# print_HOD_parameters("train", ng_fixed=True)
