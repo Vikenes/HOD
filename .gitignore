@@ -5,7 +5,7 @@
 *.npy
 *.csv
 
-**/test.sh # Used for pipelines
+HaloModel/individual_HOD_parameter_variation/test.sh # Testing 
 
 ### C++ ###
 # Prerequisites
