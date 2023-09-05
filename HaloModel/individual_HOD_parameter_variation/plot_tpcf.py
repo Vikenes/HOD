@@ -24,7 +24,7 @@ SAVE = False
 NG_FIXED = False
 
 
-def plot_TPCF_individual_param_varied(subfolder):
+def plot_TPCF_individual_param_varied_grid(subfolder):
     """
     Halo_file: halocatalogue file for training parameters 
      - halo_file.keys(): individual files, ['node0', 'node1', ..., 'nodeN']
@@ -83,12 +83,12 @@ def plot_TPCF_individual_param_varied(subfolder):
         ax.plot(r_fiducial, xi_fiducial, 
                 '-', lw=1, color='k', alpha=1, 
                 label="Fiducial", zorder=0)
-        
+       
 
         for j in sorted_idx:#, npy_file in enumerate(INDATAPATH.glob(npy_files)):
 
             r, xi = np.load(f"{INDATAPATH}/TPCF_vary_{vary_param}_node{j}.npy")
-
+            
             if j == param_min_idx:
                 ax.plot(r, xi, 
                         'o-', ms=2,
@@ -111,6 +111,7 @@ def plot_TPCF_individual_param_varied(subfolder):
         ax.set_yscale('log')
         ax.legend(loc='lower left')
 
+        
 
 
     fig.supxlabel(r"$r\: [h^{-1} \mathrm{Mpc}]$")
@@ -123,11 +124,103 @@ def plot_TPCF_individual_param_varied(subfolder):
     ax0.set_ylim(1e-3, 1e6)
     ax2.set_ylim(1e-3, 1e6)
 
-    # plt.show()
-    plt.savefig(f"{FIGPATH}/TPCF_{subfolder}.png", dpi=300)
+    plt.show()
+    # plt.savefig(f"{FIGPATH}/TPCF_{subfolder}.png", dpi=300)
             
 
 
+def plot_TPCF_individual_param_varied_single(subfolder, vary_param):
+    """
+    Halo_file: halocatalogue file for training parameters 
+     - halo_file.keys(): individual files, ['node0', 'node1', ..., 'nodeN']
+     - halo_file.attrs.keys(): cosmological parameters, e.g. ['H0', 'Om0', 'lnAs', 'n_s', ...]
+     - halo_file['nodex'].attrs.keys(): HOD parameters, e.g. ['alpha', 'log10Mmin', 'ng', 'nc', ...]
+     - halo_file['nodex'].keys(): catalogue data, e.g. ['host_radius', 'x', 'y', 'z', 'v_x', ...]
+    """
+
+    PARAM_PATH = f"{HOD_DATA_PATH}/individual_HOD_parameter_variation/{subfolder}"
+    INDATAPATH = Path(f"{PARAM_PATH}/tpcf_data")
+    FIGPATH = f"plots"
+    Path(FIGPATH).mkdir(parents=True, exist_ok=True)
+
+
+    fig, ax = plt.subplots(1,1, figsize=(8, 6))
+
+    fig.tight_layout()
+
+    params_varied = ['sigma_logM', 'log10M1', 'kappa', 'alpha']
+    params_varied_lables = [
+        r"$\sigma_{\log M}$", 
+        r"$\log M_1$", 
+        r"$\kappa$", 
+        r"$\alpha$"]
+    param_varied_idx = None
+    for p in params_varied:
+        if p == vary_param:
+            param_varied_idx = params_varied.index(p)
+            break
+    assert param_varied_idx is not None, f"Parameter {vary_param} not found in {params_varied}"
+    
+    r_fiducial, xi_fiducial = np.load(f"{HOD_DATA_PATH}/individual_HOD_parameter_variation/data_results/TPCF_fiducial.npy")
+    
+    
+    param_file = f"{PARAM_PATH}/HOD_parameters_vary_{vary_param}.csv"
+    param_csv = pd.read_csv(param_file)
+    param_col = param_csv[f'{vary_param}']
+
+    sorted_idx = np.argsort(param_col)
+    param_max_idx = np.argmax(param_col)
+    param_min_idx = np.argmin(param_col)
+    for key in param_csv.keys():
+        if key != vary_param:
+            print(f"  {key:12s} = {param_csv[key][param_max_idx]:.3f}")
+
+    for i in sorted_idx:
+        print(f"logMmin={param_csv['log10Mmin'][i]:.3f} | {vary_param}={param_col[i]:.3f}")
+
+    ax.plot(r_fiducial, xi_fiducial, 
+            '-', lw=1, color='k', alpha=1, 
+            label="Fiducial", zorder=0)
+        
+        
+
+    for j in sorted_idx:#, npy_file in enumerate(INDATAPATH.glob(npy_files)):
+
+        r, xi = np.load(f"{INDATAPATH}/TPCF_vary_{vary_param}_node{j}.npy")
+        
+        if j == param_min_idx:
+            ax.plot(r, xi, 
+                    'o-', ms=2,
+                    lw=0.7, alpha=1,
+                    color='red', 
+                    label=f"{params_varied_lables[param_varied_idx]}={param_col[j]:.3f}",
+                    zorder=1)
+        elif j == param_max_idx:
+            ax.plot(r, xi, 
+                    'o-', ms=2,
+                    lw=0.7, alpha=1, 
+                    color='blue',
+                    label=f"{params_varied_lables[param_varied_idx]}={param_col[j]:.3f}",
+                    zorder=2)
+        else:
+            ax.plot(r, xi, '--', lw=0.7, alpha=0.7)
+
+
+    ax.set_xscale('log')
+    ax.set_yscale('log')
+    ax.legend(loc='lower left')
+
+        
+
+
+    ax.set_xlabel(r"$r\: [h^{-1} \mathrm{Mpc}]$")
+    ax.set_ylabel(r"$\xi_{gg}(r)$")
+
+
+    ax.set_ylim(1e-3, 1e6)
+
+    plt.show()
+    # plt.savefig(f"{FIGPATH}/TPCF_{subfolder}.png", dpi=300)
 
 
 SAVE = False
@@ -135,4 +228,9 @@ NG_FIXED = True
 
 if len(sys.argv) == 2:
     subfolder = sys.argv[1]
-    plot_TPCF_individual_param_varied(subfolder=subfolder)
+    plot_TPCF_individual_param_varied_grid(subfolder=subfolder)
+
+elif len(sys.argv) == 3:
+    subfolder = sys.argv[1]
+    param = sys.argv[2]
+    plot_TPCF_individual_param_varied_single(subfolder=subfolder, vary_param=param)
