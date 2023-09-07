@@ -32,7 +32,7 @@ def compute_TPCF_average(n_bins=128):
     return xi_bar
 
 
-def plot_TPCF_train_halocats_interval(interval=5, n_bins=128, mask=False):
+def plot_TPCF_train_halocats_interval(interval=5, n_bins=128, mask=False, flag="train"):
     """
     Halo_file: halocatalogue file for training parameters 
      - halo_file.keys(): individual files, ['node0', 'node1', ..., 'nodeN']
@@ -45,7 +45,7 @@ def plot_TPCF_train_halocats_interval(interval=5, n_bins=128, mask=False):
     xi_bar = compute_TPCF_average(n_bins=n_bins)
 
 
-    npy_files = f"TPCF_train_node*_{n_bins}bins*.npy"
+    npy_files = f"TPCF_{flag}_node*_{n_bins}bins*.npy"
 
     for i, npy_file in enumerate(INDATAPATH.glob(npy_files)):
 
@@ -80,7 +80,7 @@ def plot_TPCF_train_halocats_interval(interval=5, n_bins=128, mask=False):
             ax.set_ylim(1e-3, 1e6)
             plt.legend()
             if SAVE:
-                figname = f"TPCF_train_node{node_range}_{n_bins}bins"
+                figname = f"TPCF_{flag}_node{node_range}_{n_bins}bins"
                 if NG_FIXED:
                     figname += "_ng_fixed"
                 plt.savefig(f"{FIGPATH}/{figname}.png", dpi=300)
@@ -91,12 +91,12 @@ def plot_TPCF_train_halocats_interval(interval=5, n_bins=128, mask=False):
     plt.close()       
             
 
-def plot_xi_over_xi_bar(interval=5, n_bins=128, mask=False):
+def plot_xi_over_xi_bar(interval=5, n_bins=128, mask=False, flag="train"):
     fig, ax = plt.subplots(1, 1, figsize=(8, 6))
 
     xi_bar = compute_TPCF_average(n_bins=n_bins)
 
-    npy_files = f"TPCF_train_node*_{n_bins}bins*.npy"
+    npy_files = f"TPCF_{flag}_node*_{n_bins}bins*.npy"
 
     for i, npy_file in enumerate(INDATAPATH.glob(npy_files)):
         r, xi = np.load(npy_file)
@@ -128,7 +128,7 @@ def plot_xi_over_xi_bar(interval=5, n_bins=128, mask=False):
             if interval <= 10:
                 plt.legend()
             if SAVE:
-                figname = f"TPCF_train_node{node_range}_{n_bins}bins_ratio"
+                figname = f"TPCF_{flag}_node{node_range}_{n_bins}bins_ratio"
                 if NG_FIXED:
                     figname += "_ng_fixed"
 
@@ -152,5 +152,5 @@ def plot_xi_over_xi_bar(interval=5, n_bins=128, mask=False):
 
 SAVE = False
 NG_FIXED = True
-plot_TPCF_train_halocats_interval(interval=25, n_bins=115, mask=True)
+plot_TPCF_train_halocats_interval(interval=10, n_bins=115, mask=True, flag='test')
 # plot_xi_over_xi_bar(interval=25, n_bins=115, mask=True)
