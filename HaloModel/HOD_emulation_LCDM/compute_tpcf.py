@@ -82,7 +82,7 @@ def compute_TPCF_fiducial_halocat_halotools(n_bins=128, threads=12):
 
 
 
-def compute_TPCF_halocats_pycorr(n_bins=128, flag="train", ng_fixed=False):
+def compute_TPCF_halocats_pycorr(n_bins=128, flag="train", ng_fixed=False, emulate_copy=False):
     """
     Halo_file: halocatalogue file for training parameters 
      - halo_file.keys(): individual files, ['node0', 'node1', ..., 'nodeN']
@@ -108,12 +108,25 @@ def compute_TPCF_halocats_pycorr(n_bins=128, flag="train", ng_fixed=False):
     
     for node_idx in range(N_nodes):
         if ng_fixed:
-            outfile = f"{OUTDATAPATH}/TPCF_{flag}_node{node_idx}_{n_bins}bins_ng_fixed.npy"
+            outfile = Path(f"{OUTDATAPATH}/TPCF_{flag}_node{node_idx}_{n_bins}bins_ng_fixed.npy")
         else:
-            outfile = f"{OUTDATAPATH}/TPCF_{flag}_node{node_idx}_{n_bins}bins.npy"
-        if Path(outfile).exists():
+            outfile = Path(f"{OUTDATAPATH}/TPCF_{flag}_node{node_idx}_{n_bins}bins.npy")
+        
+        if outfile.exists() and not emulate_copy:
             print(f"File {outfile} already exists, skipping...")
             continue
+        
+        elif outfile.exists() and emulate_copy:
+            outfile_data = np.load(outfile)
+            emulate_outfile = outfile.parent.parent / "emulation_data" / outfile.name
+            if not emulate_outfile.exists():
+                print(f"Saving emulation copy of {outfile.parent.name}/{outfile.name} to ", end='') 
+                print(f"{emulate_outfile.parent.name}/{emulate_outfile.name}...")
+                np.save(emulate_outfile, outfile_data)
+            else:
+                print(f"Emulation copy of {outfile.name} already exists, skipping...")
+
+            continue 
 
         node_catalogue = halo_file[f"node{node_idx}"]
         x = np.array(node_catalogue['x'][:])
@@ -134,6 +147,11 @@ def compute_TPCF_halocats_pycorr(n_bins=128, flag="train", ng_fixed=False):
 
         print(f"Time elapsed for node{node_idx}: {time.time() - t0i:.2f} s")
         np.save(outfile, np.array([r, xi]))
+        if emulate_copy:
+            emulate_outfile = outfile.parent.parent / "emulation_data" / outfile.name
+            if not emulate_outfile.exists():
+                np.save(emulate_outfile, np.array([r, xi]))
+
 
 
     print(f"Total time elapsed: {time.time() - t0:.2f} s")
@@ -143,4 +161,4 @@ def compute_TPCF_halocats_pycorr(n_bins=128, flag="train", ng_fixed=False):
 # compute_TPCF_fiducial_halocat_halotools(n_bins=64, threads=128)
 # compute_TPCF_train_halocats_halotools(n_bins=64)
 # compute_TPCF_halocats_pycorr(n_bins=115, ng_fixed=True, flag="test")
-# compute_TPCF_halocats_pycorr(n_bins=115, ng_fixed=True, flag="val")
+# compute_TPCF_halocats_pycorr(n_bins=115, ng_fixed=True, flag="test", emulate_copy=True)
