@@ -14,103 +14,118 @@ import pandas as pd
 # import warnings
 # warnings.filterwarnings("ignore")
 
-HOD_DATA_PATH = "/mn/stornext/d5/data/vetleav/HOD_AbacusData/c000_LCDM_simulation"
-HALO_ARRAYS_PATH = f"{HOD_DATA_PATH}/version0"
+DATA_PATH           = "/mn/stornext/d5/data/vetleav/HOD_AbacusData/c000_LCDM_simulation"
+HALO_ARRAYS_PATH    = f"{DATA_PATH}/version0"
+HOD_DATA_PATH       = f"{DATA_PATH}/TPCF_emulation"
+HOD_PARAMETERS_PATH = f"{HOD_DATA_PATH}/HOD_parameters"
+OUTFILEPATH         = f"{HOD_DATA_PATH}/HOD_catalogues"
 
-OUTFILEPATH = f"{HOD_DATA_PATH}/HOD_data"
 dataset_names = ['train', 'test', 'val']
 
-def make_hdf5_files(ng_fixed=False):
+def make_hdf5_files(ng_fixed=True):
 
     print("Making hdf5 files...")
 
     for flag in dataset_names:
+        
         print(f"Computing for flag={flag}")
-        outfname = f"halocat_{flag}"
+        filename_suffix = f"{flag}"
         if ng_fixed:
-            outfname += "_ng_fixed"
+            filename_suffix += "_ng_fixed"
+        
+        outfname = f"halocat_{filename_suffix}"
+
         OUTFILE = Path((f"{OUTFILEPATH}/{outfname}.hdf5"))
         if OUTFILE.exists():
             print(f"File {OUTFILE} already exists, skipping...")
             continue
-
+        
+        # Make hdf5 file
         fff = h5py.File(f"{OUTFILEPATH}/{outfname}.hdf5", "w")
-        if ng_fixed:
-            hod_params_fname = f"{HOD_DATA_PATH}/HOD_data/HOD_parameters_ng_fixed_{flag}.csv"
-        else:
-            hod_params_fname = f"{HOD_DATA_PATH}/HOD_data/HOD_parameters_{flag}.csv"
 
-        node_params_df = pd.read_csv(hod_params_fname)
+        # Set up cosmology and simulation info 
+        cosmology = Cosmology.from_custom(run=0, emulator_data_path=DATA_PATH)
+        redshift  = 0.25 
+        boxsize   = 2000.0
 
-        cosmology = Cosmology.from_custom(run=0, emulator_data_path=HOD_DATA_PATH)
+        # Store cosmology and simulation info in hdf5 file
+        fff.attrs["boxsize"]            = boxsize
+        fff.attrs["central_galaxy"]     = 0
+        fff.attrs["satellite_galaxy"]   = 1
+        fff.attrs["H0"]                 = float(cosmology.H0.value)
+        fff.attrs["Om0"]                = cosmology.Om0
+        fff.attrs["Ode0"]               = cosmology.Ode0
+        fff.attrs["w0"]                 = cosmology.w0
+        fff.attrs["wc0"]                = cosmology.wc0
+        fff.attrs["Ob0"]                = cosmology.Ob0
+        fff.attrs["Neff"]               = cosmology.Neff
+        fff.attrs["lnAs"]               = cosmology.lnAs
+        fff.attrs["n_s"]                = cosmology.n_s
 
-        redshift = 0.25 
-        boxsize  = 2000.0
-        fff.attrs["boxsize"]  = boxsize
-        fff.attrs["central_galaxy"] = 0 
-        fff.attrs["satellite_galaxy"] = 1
-        fff.attrs["H0"]   = float(cosmology.H0.value)
-        fff.attrs["Om0"]  = cosmology.Om0
-        fff.attrs["Ode0"] = cosmology.Ode0
-        fff.attrs["w0"]   = cosmology.w0
-        fff.attrs["wc0"]  = cosmology.wc0
-        fff.attrs["Ob0"]  = cosmology.Ob0
-        fff.attrs["Neff"] = cosmology.Neff
-        fff.attrs["lnAs"] = cosmology.lnAs
-        fff.attrs["n_s"]  = cosmology.n_s
-        # f.attrs["redshift"] = redshift
+        # Load pos, vel and mass of halos with mass > 1e12 h^-1 Msun
+        pos  = np.load(f"{HALO_ARRAYS_PATH}/L1_pos.npy")  # shape: (N_halos, 3)
+        vel  = np.load(f"{HALO_ARRAYS_PATH}/L1_vel.npy")  # shape: (N_halos, 3)
+        mass = np.load(f"{HALO_ARRAYS_PATH}/L1_mass.npy") # shape: (N_halos,)
 
-        pos  = np.load(f"{HALO_ARRAYS_PATH}/L1_pos.npy") # shape: (N_halos, 3)
-        vel  = np.load(f"{HALO_ARRAYS_PATH}/L1_vel.npy") #file_halocat[f"version{version_idx}"]["halo_vel"][...]
-        mass = np.load(f"{HALO_ARRAYS_PATH}/L1_mass.npy")#file_halocat[f"version{version_idx}"]["halo_mass"][...]
-        
-        
+        # Load HOD parameters
+        hod_params_fname = f"{HOD_PARAMETERS_PATH}/HOD_parameters_{filename_suffix}.csv"
+        node_params_df   = pd.read_csv(hod_params_fname)
+
+        # Make halo catalogue. 
+        # Note: The halo catalogue is independent of the HOD parameters.
         halocat = HaloCatalogue(
             pos,
             vel,
             mass,
             boxsize,
-            conc_mass_model=hmd.concentration.diemer15,
-            cosmology=cosmology,
-            redshift=redshift,
+            conc_mass_model = hmd.concentration.diemer15,
+            cosmology       = cosmology,
+            redshift        = redshift,
             )
 
+        # Loop over HOD parameters 
+        # Populate halos with galaxies for each HOD parameter set 
         for node_idx in range(len(node_params_df)):
+
             print(f"Running node{node_idx}...", end=" ")
             t0 = time.time()
 
+            # Store HOD parameters in hdf5 file
             HOD_group = fff.create_group(f"node{node_idx}") 
-
             HOD_group.attrs['log10Mmin']     = node_params_df['log10Mmin'].iloc[node_idx]
             HOD_group.attrs['sigma_logM']    = node_params_df['sigma_logM'].iloc[node_idx]
             HOD_group.attrs['log10M1']       = node_params_df['log10M1'].iloc[node_idx]
             HOD_group.attrs['kappa']         = node_params_df['kappa'].iloc[node_idx]
             HOD_group.attrs['alpha']         = node_params_df['alpha'].iloc[node_idx]
 
+            # Populate halos with galaxies
             maker = HODMaker(
-                halo_catalogue=halocat,
-                central_occ=Zheng07Centrals(),
-                sat_occ=Zheng07Sats(),
-                satellite_profile=FixedCosmologyNFW(
-                    cosmology=halocat.cosmology,
-                    redshift=redshift,
-                    mdef="200m",
-                    conc_mass_model="dutton_maccio14",
-                    sigmaM=None,
-                ),
+                halo_catalogue      = halocat,
+                central_occ         = Zheng07Centrals(),
+                sat_occ             = Zheng07Sats(),
+                satellite_profile   = FixedCosmologyNFW(
+                    cosmology       = halocat.cosmology,
+                    redshift        = redshift,
+                    mdef            = "200m",
+                    conc_mass_model = "dutton_maccio14",
+                    sigmaM          = None,
+                    ),
                 galaxy=Galaxy(
                     logM_min    = node_params_df['log10Mmin'].iloc[node_idx],
                     sigma_logM  = node_params_df['sigma_logM'].iloc[node_idx],
                     logM1       = node_params_df['log10M1'].iloc[node_idx],
                     kappa       = node_params_df['kappa'].iloc[node_idx],
-                    alpha       = node_params_df['alpha'].iloc[node_idx],
-            
-                ),
-            )
-
+                    alpha       = node_params_df['alpha'].iloc[node_idx]
+                    ),
+                )
             maker()
-            galaxy_df = maker.galaxy_df
-            galaxy_df_central = galaxy_df[galaxy_df['galaxy_type'] == 'central']
+
+            # Load galaxy catalogue
+            galaxy_df           = maker.galaxy_df
+
+            # Get number of central and satellite galaxies
+            # Compute number density of galaxies and store it in hdf5 file
+            galaxy_df_central   = galaxy_df[galaxy_df['galaxy_type'] == 'central']
             galaxy_df_satellite = galaxy_df[galaxy_df['galaxy_type'] == 'satellite']
             Ng = len(galaxy_df)
             Nc = len(galaxy_df_central)
@@ -122,21 +137,40 @@ def make_hdf5_files(ng_fixed=False):
             HOD_group.attrs['nc'] = nc
             HOD_group.attrs['ns'] = ns
 
+            # Convert galaxy type from string to int
             galaxy_df['galaxy_type'] = galaxy_df['galaxy_type'].replace(["central"], 0)
             galaxy_df['galaxy_type'] = galaxy_df['galaxy_type'].replace(["satellite"], 1)
             galaxy_df.astype({'galaxy_type': int})
+
+            # Store galaxy catalogue in hdf5 file
+            # galaxy_properties:
+            #  - host_mass, host_radius, host_concentration
+            #  - x, y, z, v_x, v_y, v_z
+            #  - galaxy_type
+            #  - host_centric_distance, host_id 
+
+            """
+            NB!! 
+            I may only need xyz.
+            """
             galaxy_properties = galaxy_df.columns.values.tolist()
+            
             for prop in galaxy_properties:
                 HOD_group.create_dataset(
                     prop, 
-                    data=galaxy_df[prop].values,
-                    dtype=galaxy_df[prop].dtypes
+                    data = galaxy_df[prop].values,
+                    dtype= galaxy_df[prop].dtypes
                     )
+                
             print(f"Finised, took {time.time() - t0:.2f} seconds.")
 
         fff.close()
 
 def make_HOD_fiducial():
+    """
+    Generate HOD parameters for the fiducial model.
+    Only used to test implementation in the beginning, and as a reference point for parameter values. 
+    """
 
     if Path((f"{OUTFILEPATH}/halocat_fiducial.hdf5")).exists():
             print(f"File {OUTFILEPATH}/halocat_fiducial.hdf5 already exists, skipping...")
@@ -151,7 +185,7 @@ def make_HOD_fiducial():
     alpha       = 0.9168
     node_params = [log10Mmin, sigma_logM, log10M1, kappa, alpha]
 
-    cosmology = Cosmology.from_custom(run=0, emulator_data_path=HOD_DATA_PATH)
+    cosmology = Cosmology.from_custom(run=0, emulator_data_path=DATA_PATH)
 
     redshift = 0.25 
     boxsize  = 2000.0
@@ -231,38 +265,6 @@ def make_HOD_fiducial():
     fff.close()
 
 
-def make_csv_files():
-    for flag in dataset_names:
-        ### Create csv file from hdf5 file 
-        
-        # file_pk_h5py = h5py.File(DATAPATH + f'Pk_{flag}.hdf5', 'r')
-        fff = h5py.File(OUTFILEPATH + f"/HOD_{flag}.hdf5", "r")
-
-
-        _lst = []
-        for key in fff.keys():
-
-            _lst.append(pd.DataFrame({
-                'log10Mmin' : fff[key].attrs["log10Mmin"], 
-                'sigma_logM': fff[key].attrs["sigma_logM"],    
-                'log10M1'   : fff[key].attrs["log10M1"],   
-                'kappa'     : fff[key].attrs["kappa"], 
-                'alpha'     : fff[key].attrs["alpha"], 
-
-                # 'h'         : fff[key].attrs['h'],
-                # 'omch2'     : fff[key].attrs['omch2'],
-                # 'As1e9'     : fff[key].attrs['As1e9'],
-                # 'ns'        : fff[key].attrs['ns'],
-                # 'log10kh'   : fff[key]['log10kh'][...],
-                # 'log10Pk'   : fff[key]['log10Pk'][...],
-            }))
-        df_all = pd.concat(_lst)
-        df_all.to_csv(
-            OUTFILEPATH + f'HOD_{flag}.csv',
-            index=False,
-        )
-        
-        fff.close()
 
 
 

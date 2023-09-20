@@ -3,8 +3,15 @@ from pathlib import Path
 import pandas as pd
 import h5py
 
+### TBD:
+# Take log of xi? 
+# Check if both hdf5 AND csv files are needed.
+# Check if hdf5 files are needed at all.
+
+
 """
-Make csv files with TPCF data for each node in each data set, with columns:
+Use HOD galaxy catalogues to store TPCF data.
+Make hdf5 and csv files with TPCF data for each node in each data set, with columns:
     - sigma_logM
     - alpha
     - kappa
@@ -15,9 +22,9 @@ Make csv files with TPCF data for each node in each data set, with columns:
 
 """
 
-LCDM_PATH = Path("/mn/stornext/d5/data/vetleav/HOD_AbacusData/c000_LCDM_simulation")
-TPCF_DATAPATH = Path(LCDM_PATH / "emulation_data")
-PARAMS_INPATH = Path(LCDM_PATH / "HOD_data")
+DATA_PATH       = Path("/mn/stornext/d5/data/vetleav/HOD_AbacusData/c000_LCDM_simulation/TPCF_emulation")
+TPCF_DATAPATH   = Path(DATA_PATH / "currfunc_arrays")
+HOD_PARAMETERS_PATH = Path(DATA_PATH / "HOD_parameters")
 
 dataset_names = ["train", "test", "val"]
 
@@ -25,36 +32,62 @@ dataset_names = ["train", "test", "val"]
 
 
 def make_TPCF_HDF_files_arrays_at_sliced_r(r_low=0.6, r_high=60):
+    """
+    Create hdf5 files with TPCF data for each node in each data set.
+    containing the HOD parameters for each node.
+    The HDF5 data is then used to create csv files, which is the data actually used for emulation.
+
+    r_low and r_high are the lower and upper limits of the r interval used for the TPCF data.
+    TPCF data outside this interval is noisy, and therefore left out.
+    """
+
+    # Loop over data sets
     for flag in dataset_names:
-        file_tpcf_h5py = h5py.File(f'{TPCF_DATAPATH}/TPCF_{flag}.hdf5', 'w')
+        # Create hdf5 file
+        outfile = f"{TPCF_DATAPATH}/TPCF_{flag}.hdf5"
+        if Path(outfile).exists():
+            print(f"File {outfile} already exists. Skipping.")
+            continue
+        file_tpcf_h5py = h5py.File(outfile, 'w')
 
-        parameters = Path(f"HOD_parameters_ng_fixed_{flag}.csv")
-        parameters_df = pd.read_csv(PARAMS_INPATH / parameters)
-        N_files = len(parameters_df)
+        # Read HOD parameters
+        parameters_file = Path(f"HOD_parameters_{flag}_ng_fixed.csv")
+        parameters_df   = pd.read_csv(HOD_PARAMETERS_PATH / parameters_file)
 
-        NPY_FILES = [Path(f"{TPCF_DATAPATH}/TPCF_{flag}_node{i}_115bins_ng_fixed.npy") for i in range(N_files)]
+        # Make list of npy files containing TPCF data
+        # Numeric iteration ensures correct correspondance between TPCF and HOD parameters
+        N_files     = len(parameters_df)
+        NPY_FILES   = [Path(f"{TPCF_DATAPATH}/TPCF_{flag}_node{i}_ng_fixed.npy") for i in range(N_files)]
 
-        r_common = np.load(NPY_FILES[0])[0]
-        r_mask_low_limit  = r_common > r_low
-        r_mask_high_limit = r_common < r_high
-        r_mask = r_mask_low_limit * r_mask_high_limit
+        # Read r values from first file
+        # Make mask, omitting the noisy data outside r_low and r_high
+        r_common            = np.load(NPY_FILES[0])[0]
+        r_mask_low_limit    = r_common > r_low
+        r_mask_high_limit   = r_common < r_high
+        r_mask              = r_mask_low_limit * r_mask_high_limit
 
-
+        # Loop over nodes
         for node_idx, npy_file in enumerate(NPY_FILES):
+            # Ensure correct correspondance between TPCF and HOD parameters
             npy_node_number = int(npy_file.stem.split("_")[2][4:])
             if node_idx != npy_node_number:
                 print('Error. Node index does not match node number in file name.')
                 exit()
 
+            # Load TPCF data
             r, xi = np.load(npy_file)[:, r_mask]
 
+            # Create data group
             node_group = file_tpcf_h5py.create_group(f'node{node_idx}')
 
+            # Store HOD parameters in hdf5 file
             node_group.attrs['sigma_logM']  = parameters_df['sigma_logM'].iloc[node_idx]
             node_group.attrs['alpha']       = parameters_df['alpha'].iloc[node_idx]
             node_group.attrs['kappa']       = parameters_df['kappa'].iloc[node_idx]
             node_group.attrs['log10M1']     = parameters_df['log10M1'].iloc[node_idx]
             node_group.attrs['log10Mmin']   = parameters_df['log10Mmin'].iloc[node_idx]            
+
+            # Store TPCF data in hdf5 file
             node_group.create_dataset('r', data=r)
             node_group.create_dataset('xi', data=xi)
 
@@ -62,6 +95,10 @@ def make_TPCF_HDF_files_arrays_at_sliced_r(r_low=0.6, r_high=60):
 
 
 def hdf5_to_csv():
+    """
+    Make csv files from hdf5 files.
+    This is the data actually used for emulation. 
+    """
     for flag in dataset_names:
     ### Create csv file from hdf5 file 
     

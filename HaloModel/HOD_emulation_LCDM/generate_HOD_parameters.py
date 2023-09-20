@@ -3,15 +3,13 @@ import pandas as pd
 import time 
 from smt.sampling_methods import LHS
 from pathlib import Path
-import hmd 
-# from typing import 
 
 from numdens_HOD import estimate_log10Mmin_from_gal_num_density
 
 # DATAPATH = Path("mn/stornext/d5/data/vetleav/HOD_AbacusData/c000_LCDM_simulation/HOD_parameters")
-HOD_DATA_PATH = "/mn/stornext/d5/data/vetleav/HOD_AbacusData/c000_LCDM_simulation"
-HALO_ARRAYS_PATH = f"{HOD_DATA_PATH}/version0"
-OUTFILEPATH = f"{HOD_DATA_PATH}/HOD_data"
+HOD_DATA_PATH       = "/mn/stornext/d5/data/vetleav/HOD_AbacusData/c000_LCDM_simulation"
+HALO_ARRAYS_PATH    = f"{HOD_DATA_PATH}/version0"
+OUTFILEPATH         = f"{HOD_DATA_PATH}/HOD_parameters"
 
 # Ensure reproducibility
 RANDOMSTATE = np.random.RandomState(1998)
@@ -23,15 +21,20 @@ Ranges we consider for the five parameters h, omega_m, As, ns.
 
 
 def make_csv_files(
-        num_train:  int  = 50, 
-        num_test:   int  = 10, 
-        num_val:    int  = 10, 
-        fix_ng:     bool = True
+        num_train:  int   = 50, 
+        num_test:   int   = 10, 
+        num_val:    int   = 10, 
+        fix_ng:     bool  = True,
+        ng_desired: float = 2.174e-4 # h^3 Mpc^-3
+
         ):
     """
-    Create parameter datasets.
-    N=50 combinations for train,
-    N=10 combinations for test and validation
+    Create parameter datasets with LHS sampler.
+    generates   num_train nodes for training, 
+                num_test nodes for testing,
+                num_val nodes for validation.
+
+    If fix_ng=True, log10Mmin is estimated such that the galaxy number density becomes ng_desired.
     """
 
     ### FIDUCIAL VALUES. From https://arxiv.org/pdf/2208.05218.pdf, Table 3  ###
@@ -41,7 +44,6 @@ def make_csv_files(
     kappa       = 0.51 
     alpha       = 0.9168  
 
-    ng_desired = 2.174e-4 # h^3 Mpc^-3
 
     # Vary parameters by 20% around fiducial values 
     param_limits = np.array([
@@ -88,7 +90,6 @@ def make_csv_files(
 
             node_params = np.hstack((log10Mmin[:, np.newaxis], node_params))
             print(f"Estimating log10Mmin for {dataset} dataset took {time.time() - start:.2f} seconds.")
-        
         # Save parameters to csv file
         df = pd.DataFrame({
             'log10Mmin'     : node_params[:, 0],
@@ -97,11 +98,18 @@ def make_csv_files(
             'kappa'         : node_params[:, 3],
             'alpha'         : node_params[:, 4],
         })
-        fname   = Path("HOD_parameters_ng_fixed_" + str(dataset) + ".csv")
+        fname = f"HOD_parameters_{dataset}"
+        if fix_ng:
+            fname += "_ng_fixed" 
+        fname   = Path(f"{fname}.csv")
         outfile = Path(OUTFILEPATH / fname)
+        exit()
         df.to_csv(
             outfile,
             index=False
         )
 
-make_csv_files(fix_ng=False)
+make_csv_files(num_train=500,
+               num_test=100,
+               num_val=100,
+               fix_ng=True)
