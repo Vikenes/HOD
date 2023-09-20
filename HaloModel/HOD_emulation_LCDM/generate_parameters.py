@@ -4,6 +4,12 @@ import pandas as pd
 from smt.sampling_methods import LHS
 from pathlib import Path
 
+"""
+Generates HOD parameter files.
+Does not fix the number density of galaxies, n_g.
+Will merge it with the other script later.
+"""
+
 # DATAPATH = Path("mn/stornext/d5/data/vetleav/HOD_AbacusData/c000_LCDM_simulation/HOD_parameters")
 DATAPATH = Path("/mn/stornext/d5/data/vetleav/HOD_AbacusData/c000_LCDM_simulation/HOD_data")
 
