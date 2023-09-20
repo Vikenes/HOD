@@ -7,9 +7,9 @@ from pathlib import Path
 from numdens_HOD import estimate_log10Mmin_from_gal_num_density
 
 # DATAPATH = Path("mn/stornext/d5/data/vetleav/HOD_AbacusData/c000_LCDM_simulation/HOD_parameters")
-HOD_DATA_PATH       = "/mn/stornext/d5/data/vetleav/HOD_AbacusData/c000_LCDM_simulation"
-HALO_ARRAYS_PATH    = f"{HOD_DATA_PATH}/version0"
-OUTFILEPATH         = f"{HOD_DATA_PATH}/HOD_parameters"
+DATA_PATH           = "/mn/stornext/d5/data/vetleav/HOD_AbacusData/c000_LCDM_simulation"
+HOD_DATA_PATH       = f"{DATA_PATH}/TPCF_emulation"
+HOD_PARAMETERS_PATH = f"{HOD_DATA_PATH}/HOD_parameters"
 
 # Ensure reproducibility
 RANDOMSTATE = np.random.RandomState(1998)
@@ -21,9 +21,9 @@ Ranges we consider for the five parameters h, omega_m, As, ns.
 
 
 def make_csv_files(
-        num_train:  int   = 50, 
-        num_test:   int   = 10, 
-        num_val:    int   = 10, 
+        num_train:  int   = 500, 
+        num_test:   int   = 100, 
+        num_val:    int   = 100, 
         fix_ng:     bool  = True,
         ng_desired: float = 2.174e-4 # h^3 Mpc^-3
 
@@ -57,7 +57,6 @@ def make_csv_files(
         log10Mmin           = 13.62 # h^-1 Msun
         log10Mmin_limits    = np.array([log10Mmin * 0.9, log10Mmin * 1.1])
         param_limits        = np.vstack((log10Mmin_limits, param_limits))
-
     dataset_config_size = {
         'train': num_train,
         'test':  num_test,
@@ -68,13 +67,21 @@ def make_csv_files(
     # Create parameter files. 
     for dataset in dataset_names:
 
+        fname = f"HOD_parameters_{dataset}"
+        if fix_ng:
+            fname += "_ng_fixed" 
+        fname   = Path(f"{fname}.csv")
+        outfile = Path(HOD_PARAMETERS_PATH / fname)
+        if outfile.exists():
+            print(f"File {outfile} already exists. Skipping.")
+            continue
+
         # Create LHS sampler
         LHC_sampler = LHS(
             xlimits      = param_limits, 
             criterion    = "corr",
             random_state = RANDOMSTATE,
         ) 
-        
         # Sample parameters
         samples     = dataset_config_size[dataset]
         node_params = LHC_sampler(samples)
@@ -90,6 +97,7 @@ def make_csv_files(
 
             node_params = np.hstack((log10Mmin[:, np.newaxis], node_params))
             print(f"Estimating log10Mmin for {dataset} dataset took {time.time() - start:.2f} seconds.")
+            
         # Save parameters to csv file
         df = pd.DataFrame({
             'log10Mmin'     : node_params[:, 0],
@@ -98,18 +106,13 @@ def make_csv_files(
             'kappa'         : node_params[:, 3],
             'alpha'         : node_params[:, 4],
         })
-        fname = f"HOD_parameters_{dataset}"
-        if fix_ng:
-            fname += "_ng_fixed" 
-        fname   = Path(f"{fname}.csv")
-        outfile = Path(OUTFILEPATH / fname)
-        exit()
+        
         df.to_csv(
             outfile,
             index=False
         )
 
-make_csv_files(num_train=500,
-               num_test=100,
-               num_val=100,
+make_csv_files(num_train=5,
+               num_test=2,
+               num_val=2,
                fix_ng=True)

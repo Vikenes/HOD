@@ -22,9 +22,10 @@ Make hdf5 and csv files with TPCF data for each node in each data set, with colu
 
 """
 
-DATA_PATH       = Path("/mn/stornext/d5/data/vetleav/HOD_AbacusData/c000_LCDM_simulation/TPCF_emulation")
-TPCF_DATAPATH   = Path(DATA_PATH / "currfunc_arrays")
+DATA_PATH           = Path("/mn/stornext/d5/data/vetleav/HOD_AbacusData/c000_LCDM_simulation/TPCF_emulation")
+TPCF_DATAPATH       = Path(DATA_PATH / "corrfunc_arrays")
 HOD_PARAMETERS_PATH = Path(DATA_PATH / "HOD_parameters")
+EMULATION_DATA_PATH = Path(DATA_PATH / "emulation_files")
 
 dataset_names = ["train", "test", "val"]
 
@@ -44,10 +45,10 @@ def make_TPCF_HDF_files_arrays_at_sliced_r(r_low=0.6, r_high=60):
     # Loop over data sets
     for flag in dataset_names:
         # Create hdf5 file
-        outfile = f"{TPCF_DATAPATH}/TPCF_{flag}.hdf5"
+        outfile = f"{EMULATION_DATA_PATH}/TPCF_{flag}.hdf5"
         if Path(outfile).exists():
             print(f"File {outfile} already exists. Skipping.")
-            continue
+            # continue
         file_tpcf_h5py = h5py.File(outfile, 'w')
 
         # Read HOD parameters
@@ -102,7 +103,7 @@ def hdf5_to_csv():
     for flag in dataset_names:
     ### Create csv file from hdf5 file 
     
-        file_tpcf_h5py = h5py.File(f'{TPCF_DATAPATH}/TPCF_{flag}.hdf5', 'r')
+        file_tpcf_h5py = h5py.File(f'{EMULATION_DATA_PATH}/TPCF_{flag}.hdf5', 'r')
 
         _out_list = []
         for key in file_tpcf_h5py.keys():
@@ -117,15 +118,15 @@ def hdf5_to_csv():
                 'xi'        : file_tpcf_h5py[key]['xi'][...],
             })
             _out_list.append(df)
-            
+        
         df_all = pd.concat(_out_list)
         df_all.to_csv(
-            f'{TPCF_DATAPATH}/TPCF_{flag}.csv',
+            f'{EMULATION_DATA_PATH}/TPCF_{flag}.csv',
             index=False,
         )
         
         file_tpcf_h5py.close()
 
 # slice_TPCF_arrays_at_r_interval()
-# make_TPCF_HDF_files_arrays_at_sliced_r()
-# hdf5_to_csv()
+make_TPCF_HDF_files_arrays_at_sliced_r()
+hdf5_to_csv()

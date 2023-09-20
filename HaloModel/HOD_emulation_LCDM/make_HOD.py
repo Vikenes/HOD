@@ -10,6 +10,7 @@ from hmd.profiles import FixedCosmologyNFW
 from hmd.populate import HODMaker
 from pathlib import Path
 import pandas as pd
+import sys 
 
 # import warnings
 # warnings.filterwarnings("ignore")
@@ -162,7 +163,7 @@ def make_hdf5_files(ng_fixed=True):
                     dtype= galaxy_df[prop].dtypes
                     )
                 
-            print(f"Finised, took {time.time() - t0:.2f} seconds.")
+            print(f"Finished, took {time.time() - t0:.2f} seconds.")
 
         fff.close()
 
@@ -266,7 +267,4 @@ def make_HOD_fiducial():
 
 
 
-
-
 make_hdf5_files(ng_fixed=True)
-# make_HOD_fiducial()
