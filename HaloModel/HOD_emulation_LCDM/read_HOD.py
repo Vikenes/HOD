@@ -1,19 +1,18 @@
 import numpy as np 
 import h5py 
 import time 
-# from dq import Cosmology
-# import hmd # No GPU/TPU found 
-# from hmd.catalogue import ParticleCatalogue, HaloCatalogue, GalaxyCatalogue
-# from hmd.occupation import Zheng07Centrals, Zheng07Sats
-# from hmd.galaxy import Galaxy
-# from hmd.profiles import FixedCosmologyNFW # Initialize SigmaM emulator 
-# from hmd.populate import HODMaker
 from pathlib import Path
 
 import pandas as pd
 
-# import warnings
-# warnings.filterwarnings("ignore")
+"""
+Not important, just for testing.
+Prints various properties of the HOD catalogues.
+E.g. test that the number of galaxies is correctly constrained,
+print the HOD parameters, etc.
+"""
+
+
 
 HOD_DATA_PATH = "/mn/stornext/d5/data/vetleav/HOD_AbacusData/c000_LCDM_simulation"
 HALO_ARRAYS_PATH = f"{HOD_DATA_PATH}/version0"
@@ -114,40 +113,6 @@ def read_HOD_fiducial_hdf5():
     print(f"nc: {nc:.4e}")
     print(f"ns: {ns:.4e}")
 
-
-
-def make_csv_files():
-    for flag in dataset_names:
-        ### Create csv file from hdf5 file 
-        
-        # file_pk_h5py = h5py.File(DATAPATH + f'Pk_{flag}.hdf5', 'r')
-        fff = h5py.File(OUTFILEPATH + f"/HOD_{flag}.hdf5", "r")
-
-
-        _lst = []
-        for key in fff.keys():
-
-            _lst.append(pd.DataFrame({
-                'log10Mmin' : fff[key].attrs["log10Mmin"], 
-                'sigma_logM': fff[key].attrs["sigma_logM"],    
-                'log10M1'   : fff[key].attrs["log10M1"],   
-                'kappa'     : fff[key].attrs["kappa"], 
-                'alpha'     : fff[key].attrs["alpha"], 
-
-                # 'h'         : fff[key].attrs['h'],
-                # 'omch2'     : fff[key].attrs['omch2'],
-                # 'As1e9'     : fff[key].attrs['As1e9'],
-                # 'ns'        : fff[key].attrs['ns'],
-                # 'log10kh'   : fff[key]['log10kh'][...],
-                # 'log10Pk'   : fff[key]['log10Pk'][...],
-            }))
-        df_all = pd.concat(_lst)
-        df_all.to_csv(
-            OUTFILEPATH + f'HOD_{flag}.csv',
-            index=False,
-        )
-        
-        fff.close()
 
 print("No constraints on ng:")
 read_hdf5_files()
