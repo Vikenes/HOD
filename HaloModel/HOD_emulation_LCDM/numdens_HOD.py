@@ -158,7 +158,7 @@ def estimate_log10Mmin_from_gal_num_density(
     # Estimate ng from halo catalogue
     # The log10Mmin range chosen has been tested. 
     # it yields ng values around 2.174e-4 for all parameter sets.
-    N_Mmin        = 100
+    N_Mmin        = 200
     log10Mmin_arr = np.linspace(13.4, 13.9, N_Mmin) 
 
     # Number of parameter sets
