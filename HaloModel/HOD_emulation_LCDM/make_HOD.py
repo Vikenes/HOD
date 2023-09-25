@@ -23,7 +23,7 @@ OUTFILEPATH         = f"{HOD_DATA_PATH}/HOD_catalogues"
 
 dataset_names = ['train', 'test', 'val']
 
-def make_hdf5_files(ng_fixed=True):
+def make_hdf5_files(ng_fixed=True, pos_only=False):
 
     print("Making hdf5 files...")
 
@@ -35,6 +35,8 @@ def make_hdf5_files(ng_fixed=True):
             filename_suffix += "_ng_fixed"
         
         outfname = f"halocat_{filename_suffix}"
+        if pos_only:
+            outfname += "_pos"
 
         OUTFILE = Path((f"{OUTFILEPATH}/{outfname}.hdf5"))
         if OUTFILE.exists():
@@ -150,13 +152,13 @@ def make_hdf5_files(ng_fixed=True):
             #  - galaxy_type
             #  - host_centric_distance, host_id 
 
-            """
-            NB!! 
-            I may only need xyz.
-            """
+
             galaxy_properties = galaxy_df.columns.values.tolist()
+            pos_keys          = ['x', 'y', 'z']
             
             for prop in galaxy_properties:
+                if prop not in pos_keys and pos_only:
+                    continue
                 HOD_group.create_dataset(
                     prop, 
                     data = galaxy_df[prop].values,
@@ -167,7 +169,7 @@ def make_hdf5_files(ng_fixed=True):
 
         fff.close()
 
-def make_HOD_fiducial():
+def make_HOD_fiducial(pos_only=False):
     """
     Generate HOD parameters for the fiducial model.
     Only used to test implementation in the beginning, and as a reference point for parameter values. 
@@ -205,7 +207,7 @@ def make_HOD_fiducial():
         redshift=redshift,
         )
 
-    print(f"Running Fiducial...", end=" ")
+    print(f"Running Fiducial...")
     t0 = time.time()
 
     # HOD_group = fff.create_group(f"node{node_idx}") 
@@ -255,7 +257,12 @@ def make_HOD_fiducial():
     galaxy_df['galaxy_type'] = galaxy_df['galaxy_type'].replace(["satellite"], 1)
     galaxy_df.astype({'galaxy_type': int})
     galaxy_properties = galaxy_df.columns.values.tolist()
+    pos_keys = ['x', 'y', 'z']
+    
     for prop in galaxy_properties:
+        if prop not in pos_keys and pos_only:
+            continue
+
         fff.create_dataset(
             prop, 
             data=galaxy_df[prop].values,
@@ -267,4 +274,4 @@ def make_HOD_fiducial():
 
 
 
-make_hdf5_files(ng_fixed=True)
+make_hdf5_files(ng_fixed=True, pos_only=True)
