@@ -112,7 +112,7 @@ def make_csv_files(
             index=False
         )
 
-make_csv_files(num_train=5,
-               num_test=2,
-               num_val=2,
+make_csv_files(num_train=500,
+               num_test=100,
+               num_val=100,
                fix_ng=True)
