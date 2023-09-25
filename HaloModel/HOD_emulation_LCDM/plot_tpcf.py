@@ -62,7 +62,7 @@ def plot_TPCF_train_halocats_interval(interval=5, n_bins=128, mask=False, flag="
         if interval>10:
             ax.plot(r, xi, 'o-', ms=2, lw=0.7, alpha=0.6)
         else:
-            ax.plot(r, xi, '--', alpha=0.6, label=f"node{i}")
+            ax.plot(r, xi, 'o-', alpha=0.6, label=f"node{i}")
 
         if (i+1) % interval == 0 or i == 49:
             node_range = f"{i-interval+1}-{i}"
