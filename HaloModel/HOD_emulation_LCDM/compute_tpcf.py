@@ -6,7 +6,6 @@ import pandas as pd
 import matplotlib.pyplot as plt
 
 from pycorr import TwoPointCorrelationFunction
-from halotools.mock_observables import tpcf
 
 DATA_PATH           = "/mn/stornext/d5/data/vetleav/HOD_AbacusData/c000_LCDM_simulation"
 HOD_DATA_PATH       = f"{DATA_PATH}/TPCF_emulation"
@@ -49,35 +48,7 @@ def compute_TPCF_fiducial_halocat(n_bins=128, threads=12):
 
     return r, xi, duration
 
-def compute_TPCF_fiducial_halocat_halotools(n_bins=128, threads=12):
-    """
-    fff.keys(): catalogue data, e.g. ['host_mass', 'host_id', 'x', 'y', 'z', 'v_x', 'v_y', 'v_z', ...]
-    fff.attrs.keys(): HOD parameters, e.g. ['alpha', 'log10Mmin', 'ng', 'nc', ...]
-    
-    """
-    fff = h5py.File(f"{OLD_INDATAPATH}/halocat_fiducial.hdf5", "r")
 
-    x = np.array(fff['x'][:])
-    y = np.array(fff['y'][:])
-    z = np.array(fff['z'][:])
-
-    r_bin_edges = np.logspace(np.log10(0.1), np.log10(130), n_bins)
-
-    t0 = time.time()
-    xi = tpcf(
-        sample1=np.array([x, y, z]).T, # halotools requires shape (Npts, 3)
-        rbins=r_bin_edges,
-        period=2000.0,
-        num_threads=threads,
-    )
-
-    
-    duration = time.time() - t0
-    print(f"Time elapsed: {duration:.2f} s")
-
-    r_bin_centers = 0.5*(r_bin_edges[1:] + r_bin_edges[:-1])
-
-    return r_bin_centers, xi, duration
 
 
 
