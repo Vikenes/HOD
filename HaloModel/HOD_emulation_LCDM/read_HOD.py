@@ -14,13 +14,15 @@ print the HOD parameters, etc.
 
 
 
-HOD_DATA_PATH = "/mn/stornext/d5/data/vetleav/HOD_AbacusData/c000_LCDM_simulation"
-HALO_ARRAYS_PATH = f"{HOD_DATA_PATH}/version0"
+DATA_PATH           = "/mn/stornext/d5/data/vetleav/HOD_AbacusData/c000_LCDM_simulation"
+HALO_ARRAYS_PATH    = f"{DATA_PATH}/version0"
+HOD_DATA_PATH       = f"{DATA_PATH}/TPCF_emulation"
+HOD_PARAMETERS_PATH = f"{HOD_DATA_PATH}/HOD_parameters"
+HOD_CATALOGUES_PATH = f"{HOD_DATA_PATH}/HOD_catalogues"
 
-OUTFILEPATH = f"{HOD_DATA_PATH}/HOD_data"
 dataset_names = ['train', 'test', 'val']
 
-def read_hdf5_files(ng_fixed=False):
+def read_hdf5_files(ng_fixed=True):
     ng_list = []
     nc_list = []
     ns_list = []
@@ -29,13 +31,13 @@ def read_hdf5_files(ng_fixed=False):
         # print(f"flag={flag}") 
         if ng_fixed:
             halocat_fname = f"halocat_{flag}_ng_fixed"
-            node_params_fname = f"HOD_parameters_ng_fixed_{flag}"
+            node_params_fname = f"HOD_parameters_{flag}_ng_fixed"
         else:
             halocat_fname = f"halocat_{flag}"
             node_params_fname = f"HOD_parameters_{flag}"
 
-        fff = h5py.File(f"{OUTFILEPATH}/{halocat_fname}.hdf5", "r")
-        node_params_df = pd.read_csv(f"{HOD_DATA_PATH}/HOD_data/{node_params_fname}.csv")
+        fff = h5py.File(f"{HOD_CATALOGUES_PATH}/{halocat_fname}.hdf5", "r")
+        node_params_df = pd.read_csv(f"{HOD_PARAMETERS_PATH}/{node_params_fname}.csv")
 
         N_nodes = len(fff.keys())
         ng_flag = []
@@ -70,11 +72,10 @@ def read_hdf5_files(ng_fixed=False):
     print(f" val:   {np.mean(ng_list[2]):.4e} +/- {np.std(ng_list[2]):.4e}")
 
 def print_HOD_parameters(flag, ng_fixed=True, print_every_n=5):
-    HOD_params_path = OUTFILEPATH
     if ng_fixed:
-        outfile = f"{HOD_params_path}/HOD_parameters_ng_fixed_{flag}.csv"
+        outfile = f"{HOD_PARAMETERS_PATH}/HOD_parameters_{flag}_ng_fixed.csv"
     else:
-        outfile = f"{HOD_params_path}/HOD_parameters_{flag}.csv"
+        outfile = f"{HOD_PARAMETERS_PATH}/HOD_parameters_{flag}.csv"
     df = pd.read_csv(outfile)
     print("     sigma_logM | alpha  | kappa  | log10M1 ")
     for i in range(len(df)):
@@ -102,16 +103,6 @@ def read_csv_original():
     ng = N_total / 2000.0**3
     print(f"galaxy number density: {ng:.4e}")
 
-
-def read_HOD_fiducial_hdf5():
-    fff = h5py.File(f"{OUTFILEPATH}/halocat_fiducial.hdf5", "r")
-
-    ng = fff.attrs['ng']
-    nc = fff.attrs['nc']
-    ns = fff.attrs['ns']
-    print(f"ng: {ng:.4e}")
-    print(f"nc: {nc:.4e}")
-    print(f"ns: {ns:.4e}")
 
 
 print("No constraints on ng:")

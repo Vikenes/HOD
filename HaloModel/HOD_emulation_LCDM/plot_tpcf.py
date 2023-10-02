@@ -15,8 +15,9 @@ matplotlib.rcParams['text.latex.preamble'] = r'\usepackage{amsmath}'
 params = {'xtick.top': True, 'ytick.right': True, 'xtick.direction': 'in', 'ytick.direction': 'in'}
 plt.rcParams.update(params)
 
-HOD_DATA_PATH = "/mn/stornext/d5/data/vetleav/HOD_AbacusData/c000_LCDM_simulation"
-INDATAPATH = Path(f"{HOD_DATA_PATH}/data_measurements")
+DATA_PATH = "/mn/stornext/d5/data/vetleav/HOD_AbacusData/c000_LCDM_simulation"
+HOD_DATA_PATH = f"{DATA_PATH}/TPCF_emulation"
+INDATAPATH = Path(f"{HOD_DATA_PATH}/corrfunc_arrays")
 FIGPATH = "plots"
 
 global SAVE
@@ -24,9 +25,9 @@ global NG_FIXED
 SAVE = False
 NG_FIXED = False
 
-def compute_TPCF_average(n_bins=128):
+def compute_TPCF_average(n_bins=128, flag="train"):
     
-    npy_files = f"TPCF_train_node*_{n_bins}bins*.npy"
+    npy_files = f"TPCF_{flag}_node*_*.npy"
 
     xi_bar = np.mean([np.load(npy_file)[1] for npy_file in INDATAPATH.glob(npy_files)], axis=0)
     return xi_bar
@@ -45,7 +46,7 @@ def plot_TPCF_train_halocats_interval(interval=5, n_bins=128, mask=False, flag="
     xi_bar = compute_TPCF_average(n_bins=n_bins)
 
 
-    npy_files = f"TPCF_{flag}_node*_{n_bins}bins*.npy"
+    npy_files = f"TPCF_{flag}_node*_*.npy"
 
     for i, npy_file in enumerate(INDATAPATH.glob(npy_files)):
 
@@ -96,7 +97,7 @@ def plot_xi_over_xi_bar(interval=5, n_bins=128, mask=False, flag="train"):
 
     xi_bar = compute_TPCF_average(n_bins=n_bins)
 
-    npy_files = f"TPCF_{flag}_node*_{n_bins}bins*.npy"
+    npy_files = f"TPCF_{flag}_node*_*.npy"
 
     for i, npy_file in enumerate(INDATAPATH.glob(npy_files)):
         r, xi = np.load(npy_file)
