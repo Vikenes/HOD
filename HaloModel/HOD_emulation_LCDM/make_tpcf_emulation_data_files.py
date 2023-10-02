@@ -46,10 +46,16 @@ def make_TPCF_HDF_files_arrays_at_sliced_r(r_low=0.6, r_high=60,
     # Loop over data sets
     for flag in dataset_names:
         # Create hdf5 file
-        outfile = f"{EMULATION_DATA_PATH}/TPCF_{flag}.hdf5"
+        outfname = f"TPCF_{flag}.hdf5"
+        if log10:
+            outfname = f"log_{outfname}"
+        outfile = f"{EMULATION_DATA_PATH}/{outfname}"
+
         if Path(outfile).exists() and not overwrite:
             print(f"File {outfile} already exists. Skipping.")
-            # continue
+            continue
+
+        print(f"Creating file {outfile}")
         file_tpcf_h5py = h5py.File(outfile, 'w')
 
         # Read HOD parameters
@@ -149,5 +155,5 @@ def hdf5_to_csv(log10=True):
         file_tpcf_h5py.close()
 
 # slice_TPCF_arrays_at_r_interval()
-# make_TPCF_HDF_files_arrays_at_sliced_r()
-hdf5_to_csv(log10=True)
+make_TPCF_HDF_files_arrays_at_sliced_r()
+# hdf5_to_csv(log10=True)
