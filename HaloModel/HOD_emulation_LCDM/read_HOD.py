@@ -22,6 +22,26 @@ HOD_CATALOGUES_PATH = f"{HOD_DATA_PATH}/HOD_catalogues"
 
 dataset_names = ['train', 'test', 'val']
 
+
+def read_hdf5_keys_and_attrs(flag="train", fname=None):
+    """
+    Print the keys and attributes of the hdf5 file.
+    """
+    if fname is None:
+        fname = f"{HOD_CATALOGUES_PATH}/halocat_{flag}_ng_fixed_pos.hdf5"
+    fff     = h5py.File(fname, "r")
+    keys    = list(fff.keys())
+    attrs   = list(fff.attrs.keys())
+    values  = list(fff.values())
+    node0   = fff["node0"]
+    # print("Keys:", keys)
+    # print("Attributes:", attrs)
+    print(node0.attrs.keys())
+    print(node0.keys())
+
+    fff.close()
+
+
 def read_hdf5_files(ng_fixed=True):
     ng_list = []
     nc_list = []
@@ -105,11 +125,13 @@ def read_csv_original():
 
 
 
-print("No constraints on ng:")
-read_hdf5_files()
-print()
-print("Constraints on ng:")
-read_hdf5_files(ng_fixed=True)
+# read_hdf5_keys_and_attrs()
+
+# print("No constraints on ng:")
+# read_hdf5_files()
+# print()
+# print("Constraints on ng:")
+# read_hdf5_files(ng_fixed=True)
 # read_csv_original()
 # read_HOD_fiducial_hdf5()
 
