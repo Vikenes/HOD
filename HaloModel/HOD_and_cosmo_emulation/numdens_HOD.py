@@ -52,6 +52,7 @@ def estimate_log10Mmin_from_gal_num_density(
         ng_desired=2.174e-4, 
         version=0,
         phase=0,
+        test = False
         ):
 
     # Halo data 
@@ -67,8 +68,10 @@ def estimate_log10Mmin_from_gal_num_density(
 
     ### Make halo catalogue 
     # Define cosmology and simparams 
-    print("MAKE SURE COSMOLOGY CLASS WORKS CORRECTLY WITH NEFF AND EOS BEFORE PROCEEDING")
-    exit()
+    if version != 0 and phase == 0:
+        print("MAKE SURE COSMOLOGY CLASS WORKS CORRECTLY WITH NEFF AND EOS BEFORE PROCEEDING")
+        exit()
+
     cosmology   = Cosmology.from_custom(run=0, emulator_data_path=SIMULATION_DIR)
     redshift    = 0.25 
     boxsize     = 2000.0
@@ -97,14 +100,15 @@ def estimate_log10Mmin_from_gal_num_density(
     # Estimate ng from halo catalogue
     # The log10Mmin range chosen has been tested. 
     # it yields ng values around 2.174e-4 for all parameter sets.
-    N_Mmin        = 200
-    log10Mmin_arr = np.linspace(13.4, 13.9, N_Mmin) 
+    N_Mmin        = 300
+    log10Mmin_arr = np.linspace(13.0, 14.5, N_Mmin) 
 
     # Number of parameter sets
     N_params            = len(sigma_logM_array)
     log10Mmin_best_fit  = np.zeros(N_params)
 
     # Loop through parameter sets and estimate log10Mmin that yields ng = ng_desired
+    ng_log10Mmin_best = np.zeros((N_params, 2))
     for i in range(N_params):
         # Compute ng for all values of log10Mmin
         ng_arr          = compute_ng_analytical(log10Mmin_arr, 
@@ -129,9 +133,19 @@ def estimate_log10Mmin_from_gal_num_density(
         # Testing implementation accuracy 
         # Commented out to save time
         # Compute ng for best fit log10Mmin, to check if it is close to ng_desired
-        # if test:
-        #     ng_best_fit_spline = compute_ng_analytical(log10Mmin_best_fit[i], sigma_logM, log10M1, kappa, alpha, mass_center, dn_dM)[0]
-        #     print(f"Best fit [{i:2.0f}]: ng: {ng_best_fit_spline:.4e} | log10Mmin: {log10Mmin_best_fit[i]:.4f} | rel.diff. ng: {np.abs(1.0 - ng_best_fit_spline / ng_desired):.6e}")
 
+        # if test:
+        #     ng_best_fit_spline = compute_ng_analytical(
+        #         log10Mmin_best_fit[i], 
+        #         sigma_logM_array[i], 
+        #         log10M1_array[i], 
+        #         kappa_array[i], 
+        #         alpha_array[i], 
+        #         mass_center, 
+        #         dn_dM)[0]
+        #     ng_log10Mmin_best[i] = ng_best_fit_spline, log10Mmin_best_fit[i]
+        #     # print(f" - Best fit [{i:2.0f}]: ng: {ng_best_fit_spline:.4e} | log10Mmin: {log10Mmin_best_fit[i]:.4f} | rel.diff. ng: {np.abs(1.0 - ng_best_fit_spline / ng_desired):.6e}")
+        # if test:
+        #     print(f"WORST CASE: {np.max(ng_log10Mmin_best[:,0]):.4e} for log10Mmin = {ng_log10Mmin_best[np.argmax(ng_log10Mmin_best[:,0]),1]:.2f}, with rel diff {np.abs(1.0 - np.max(ng_log10Mmin_best[:,0]) / ng_desired):.4e}")
     return log10Mmin_best_fit
 
