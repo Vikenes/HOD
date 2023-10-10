@@ -3,6 +3,9 @@ import numpy as np
 import time 
 from pathlib import Path
 
+import concurrent.futures
+from itertools import repeat
+
 N_files_per_version = 34
 ABACUSPATH      = Path("/mn/stornext/d13/euclid_nobackup/halo/AbacusSummit") # Location of data 
 EMULATION_PATH  = Path(ABACUSPATH / "emulation_files") # Location of data
@@ -32,7 +35,7 @@ def get_asdf_filename(
         
     else:
         print(f"Error: directory {simulation} does not exist")
-        return
+        raise FileNotFoundError
 
     return asdf_filename
 
@@ -68,8 +71,8 @@ def getMassiveHaloMask(
     return MassMask
 
 def save_L1_pos_vel_mass_single_version(
-        version=130,
-        phase=0
+        version: int = 130,
+        phase:   int = 0
         ):
     """
     Create arrays of L1 data for all files in each simulation version.
@@ -79,25 +82,34 @@ def save_L1_pos_vel_mass_single_version(
         mass(N) : Total mass
     Resulting array is saved to disk.  
     """
+    assert type(version) == int, "version must be an integer"
+    assert type(phase)   == int, "phase must be an integer"
 
     version_str = str(version).zfill(3)
     phase_str   = str(phase).zfill(3)
     version_dir = Path(f"AbacusSummit_base_c{version_str}_ph{phase_str}")
+    
+    # Get filename of first file in version, yields error if file does not exist
+    af_filename = get_asdf_filename(version=version, file_idx=0, phase=phase)
+
+    # Create output directory if it does not exist
     L1_path = Path(EMULATION_PATH / version_dir / OUTDIR)
     L1_path.mkdir(parents=True, exist_ok=True)
 
+    # Create output filenames
     pos_fname  = Path(L1_path / "L1_pos.npy")
     vel_fname  = Path(L1_path / "L1_vel.npy")
     mass_fname = Path(L1_path / "L1_mass.npy")
 
+    # Check if arrays already exist, if so, skip
     if pos_fname.exists() and vel_fname.exists() and mass_fname.exists():
-        print(f"Arrays for version {version} already exist, skipping")
+        print(f"Arrays for {version_dir} already exist, skipping")
         return
     
+    # Start computation
     print(f"Saving L1 qtys for simulation {version_dir}")
     t0 = time.time()
-    
-    af_filename = get_asdf_filename(version=version, file_idx=0, phase=phase)
+
     af          = asdf.open(af_filename)
     mask        = getMassiveHaloMask(version=version, file=0, phase=phase)
 
@@ -142,26 +154,38 @@ def save_L1_pos_vel_mass_single_version(
     np.save(vel_fname, L1_vel_kms)
     np.save(mass_fname, L1_mass_hMSun)
 
-def save_L1_pos_vel_mass_all_emulator_versions():
-    if True:
-        print("Saving pos,vell,mass for all emulator versions.")
-        print("This takes a long time... Uncomment this line to proceed")
-        exit()
+    return
 
-    for v in range(130, 182):
-        save_L1_pos_vel_mass_single_version(version=v)
 
-def save_L1_pos_vel_mass_c000_LCDM_all_phases():
-    for ph in range(0, 25):
-        save_L1_pos_vel_mass_single_version(
-            version=0, 
-            phase=ph
-        )
+def save_L1_pos_vel_mass_c000_LCDM_all_phases(parallel=True):
+    """
+    Stores pos, vel, mass arrays for all phases of the c000 LCDM simulation
+    """
+    if parallel:
+        # Use parallel processing to save arrays for all phases
+        with concurrent.futures.ProcessPoolExecutor() as executor:
+            executor.map(save_L1_pos_vel_mass_single_version, [0 for i in range(25)], [i for i in range(25)])
+    else:
+        # Save arrays for all phases sequentially
+        for i in range(25):
+            save_L1_pos_vel_mass_single_version(version=0, phase=i)
 
-save_L1_pos_vel_mass_c000_LCDM_all_phases()
 
-# def save_L1_pos_vel_mass_c000_LCDM():
-    # save_L1_pos_vel_mass_single_version(version=0)
+def save_L1_pos_vel_mass_version_list(
+        v_min:    int  = 130, 
+        v_max:    int  = 181, 
+        parallel: bool = True
+        ):
+    if parallel:
+        # Use parallel processing to save arrays for all phases
+        with concurrent.futures.ProcessPoolExecutor() as executor:
+            executor.map(save_L1_pos_vel_mass_single_version, [v for v in range(v_min, v_max+1)])
+    else:
+        # Save arrays for all phases sequentially
+        for v in range(v_min, v_max+1):
+            save_L1_pos_vel_mass_single_version(version=v)
 
-# save_L1_pos_vel_mass_all_emulator_versions()
-# save_L1_pos_vel_mass_c000_LCDM()
+# save_L1_pos_vel_mass_single_version(version=0, phase=50)
+# save_L1_pos_vel_mass_c000_LCDM_all_phases()
+# save_L1_pos_vel_mass_version_list(v_min=100, v_max=126, parallel=False)
+
