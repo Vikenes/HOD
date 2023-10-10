@@ -129,7 +129,7 @@ def save_cosmo_parameters_c000_all_phases(version=0):
 def save_cosmo_parameters_all_versions():
     filename = Path("cosmological_parameters.dat")
     versions = np.arange(0,4)
-    # versions = np.concatenate((versions, np.arange(100, 127)))
+    versions = np.concatenate((versions, np.arange(100, 127)))
     versions = np.concatenate((versions, np.arange(130,182)))
     print("Saving cosmological parameters for versions: ", end="")
     for ver in versions:
