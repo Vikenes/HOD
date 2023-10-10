@@ -7,8 +7,8 @@ from astropy import units as u
 from scipy import integrate
 from scipy.misc import derivative
 import os 
+import sys 
 current_dir = os.path.dirname(os.path.abspath(__file__))
-
 from dark_emulator.darkemu.sigmaM import sigmaM_gp
 import jax.numpy as jnp
 
@@ -51,7 +51,16 @@ class Cosmology(wCDM):
         self.wc0 = wc0
         self.lnAs = lnAs
         self.n_s = n_s
+
+        # Temproary disable printing to stdout
+        # Prevents printing of "Initialize sigmaM emulator" every f-ing time
+        old_stdout = sys.stdout
+        sys.stdout = open(os.devnull, "w")
         self.sigma_M_emulator = sigmaM_gp()
+
+        # Restore printing to stdout
+        sys.stdout = old_stdout
+
 
     @classmethod
     def from_run(
