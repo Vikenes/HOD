@@ -4,17 +4,12 @@ import time
 from smt.sampling_methods import LHS
 from pathlib import Path
 
+
 from numdens_HOD import estimate_log10Mmin_from_gal_num_density
 
 # DATAPATH = Path("mn/stornext/d5/data/vetleav/HOD_AbacusData/c000_LCDM_simulation/HOD_parameters")
-D13_BASE_PATH       = "/mn/stornext/d13/euclid_nobackup/halo/AbacusSummit/emulation_files"
-
-# Ensure reproducibility
-RANDOMSTATE = np.random.RandomState(1998)
-
-"""
-Ranges we consider for the five parameters h, omega_m, As, ns.
-"""
+D13_BASE_PATH       = "/mn/stornext/d13/euclid_nobackup/halo/AbacusSummit"
+D13_EMULATION_PATH  = f"{D13_BASE_PATH}/emulation_files"
 
 
 
@@ -26,6 +21,7 @@ def make_csv_files(
         ng_desired: float = 2.174e-4, # h^3 Mpc^-3
         version:    int   = 0,
         phase:      int   = 0,
+        test:       bool  = False,
         ):
     """
     Create parameter datasets with LHS sampler.
@@ -37,14 +33,13 @@ def make_csv_files(
     """
 
     ### FIDUCIAL VALUES. From https://arxiv.org/pdf/2208.05218.pdf, Table 3  ###
-    # log10Mmin   = 13.62 # h^-1 Msun
     sigma_logM  = 0.6915 
     log10M1     = 14.42 # h^-1 Msun
     kappa       = 0.51 
     alpha       = 0.9168  
 
 
-    # Vary parameters by 20% around fiducial values 
+    # Vary parameters by +/- 10% around fiducial values 
     param_limits = np.array([
         [sigma_logM * 0.9,  sigma_logM  * 1.1],
         [log10M1    * 0.9,  log10M1     * 1.1],
@@ -53,6 +48,7 @@ def make_csv_files(
     ])
 
     if not fix_ng:
+        # Vary log10Mmin by +/- 10% around fiducial value
         log10Mmin           = 13.62 # h^-1 Msun
         log10Mmin_limits    = np.array([log10Mmin * 0.9, log10Mmin * 1.1])
         param_limits        = np.vstack((log10Mmin_limits, param_limits))
@@ -68,7 +64,15 @@ def make_csv_files(
     for dataset in dataset_names:
         version_str = str(version).zfill(3)
         phase_str   = str(phase).zfill(3)
-        HOD_PARAMETERS_PATH = Path(f"{D13_BASE_PATH}/AbacusSummit_base_c{version_str}_ph{phase_str}/HOD_parameters")
+        simname     = f"AbacusSummit_base_c{version_str}_ph{phase_str}"
+
+        # Check if simulation data exists, if not, raise error
+        # Prevents creation of files for non-existing simulations!
+        if not Path(f"{D13_BASE_PATH}/{simname}").exists(): 
+            print(f"Error: simulation '{simname}' does not exist. ")
+            raise FileNotFoundError
+        
+        HOD_PARAMETERS_PATH = Path(f"{D13_EMULATION_PATH}/{simname}/HOD_parameters")
         HOD_PARAMETERS_PATH.mkdir(parents=True, exist_ok=True)
 
         fname = f"HOD_parameters_{dataset}"
@@ -83,8 +87,7 @@ def make_csv_files(
         # Create LHS sampler
         LHC_sampler = LHS(
             xlimits      = param_limits, 
-            criterion    = "corr",
-            random_state = RANDOMSTATE,
+            criterion    = "corr"
         ) 
         # Sample parameters
         samples     = dataset_config_size[dataset]
@@ -111,15 +114,31 @@ def make_csv_files(
             'alpha'         : node_params[:, 4],
         })
         
-        df.to_csv(
-            outfile,
-            index=False
-        )
+        if not test:
+            # Save to csv file
+            df.to_csv(
+                outfile,
+                index=False
+            )
+        else:
+            print("Successfully created parameter file for testing.")
+            print(f" - Parameters for {dataset} dataset has shape {node_params.shape}")
 
 # make_csv_files(num_train=500,
 #                num_test=100,
 #                num_val=100,
 #                fix_ng=True)
+
+def test_make_csv_files():
+    make_csv_files(
+        num_train   = 50,
+        num_test    = 10,
+        num_val     = 10,
+        fix_ng      = True,
+        version     = 0,
+        phase       = 0,
+        test        = True,
+    )
 
 def make_csv_files_broad_emulator_grid():
     print("Making HOD parameter files for broad emulator grid, versions 130-181.")
@@ -159,3 +178,6 @@ def make_csv_files_c000_all_phases():
             phase       = ph,
         )
     print("Done.")
+
+
+test_make_csv_files()
