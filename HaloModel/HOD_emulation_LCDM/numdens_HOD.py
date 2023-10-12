@@ -83,10 +83,10 @@ def compute_gal_num_density():
 
 
 
-    fff = h5py.File(f"{OUTFILEPATH}/halocat_fiducial.hdf5", "r")
-    ng_estimated = fff.attrs['ng']
-    nc_estimated = fff.attrs['nc']
-    ns_estimated = fff.attrs['ns']
+    # fff = h5py.File(f"{OUTFILEPATH}/halocat_fiducial.hdf5", "r")
+    # ng_estimated = fff.attrs['ng']
+    # nc_estimated = fff.attrs['nc']
+    # ns_estimated = fff.attrs['ns']
 
     ng_analytical = simpson(integrand, mass_center, dx=dM)
     nc_analytical = simpson(dn_dM * Nc, mass_center, dx=dM)   
@@ -94,9 +94,14 @@ def compute_gal_num_density():
 
 
     print("       estimated | analytical | difference")
-    print(f"ng_bar: {ng_estimated:.4e} | {ng_analytical:.4e} | {np.abs(ng_estimated - ng_analytical):.4e} ")
-    print(f"nc_bar: {nc_estimated:.4e} | {nc_analytical:.4e} | {np.abs(nc_estimated - nc_analytical):.4e} ")
-    print(f"ns_bar: {ns_estimated:.4e} | {ns_analytical:.4e} | {np.abs(ns_estimated - ns_analytical):.4e} ")
+    # print(f"ng_bar: {ng_estimated:.4e} | {ng_analytical:.4e} | {np.abs(ng_estimated - ng_analytical):.4e} ")
+    # print(f"nc_bar: {nc_estimated:.4e} | {nc_analytical:.4e} | {np.abs(nc_estimated - nc_analytical):.4e} ")
+    # print(f"ns_bar: {ns_estimated:.4e} | {ns_analytical:.4e} | {np.abs(ns_estimated - ns_analytical):.4e} ")
+    
+    print(f"ng_bar:  {ng_analytical:.4e} ")
+    print(f"nc_bar:  {nc_analytical:.4e} ")
+    print(f"ns_bar:  {ns_analytical:.4e} ")
+    return ng_analytical, nc_analytical, ns_analytical
     
 
 
@@ -190,17 +195,30 @@ def estimate_log10Mmin_from_gal_num_density(
         # Testing implementation accuracy 
         # Commented out to save time
         # Compute ng for best fit log10Mmin, to check if it is close to ng_desired
-        # if test:
-        #     ng_best_fit_spline = compute_ng_analytical(log10Mmin_best_fit[i], sigma_logM, log10M1, kappa, alpha, mass_center, dn_dM)[0]
-        #     print(f"Best fit [{i:2.0f}]: ng: {ng_best_fit_spline:.4e} | log10Mmin: {log10Mmin_best_fit[i]:.4f} | rel.diff. ng: {np.abs(1.0 - ng_best_fit_spline / ng_desired):.6e}")
+        if test:
+            ng_best_fit_spline = compute_ng_analytical(
+                log10Mmin_best_fit[i],
+                sigma_logM_array[i],
+                log10M1_array[i],
+                kappa_array[i],
+                alpha_array[i],
+                mass_center,
+                dn_dM,
+            )[0]
+            print(f"Best fit [{i:2.0f}]: ng: {ng_best_fit_spline:.4e} | log10Mmin: {log10Mmin_best_fit[i]:.4f} | rel.diff. ng: {np.abs(1.0 - ng_best_fit_spline / ng_desired):.6e}")
 
     return log10Mmin_best_fit
 
 
 
 if __name__ == "__main__":
-    compute_gal_num_density()
-    estimate_log10Mmin_from_gal_num_density(test=True)
+    ng_analytical = compute_gal_num_density()[0]
+    estimate_log10Mmin_from_gal_num_density(
+        sigma_logM_array  = [0.6915],
+        log10M1_array     = [14.42] ,
+        kappa_array       = [0.51],
+        alpha_array       = [0.9168],
+        test=True)
 # compute_gal_num_density()
 # constrain_ng_fiducial()
 # estimate_log10Mmin_from_gal_num_density()
