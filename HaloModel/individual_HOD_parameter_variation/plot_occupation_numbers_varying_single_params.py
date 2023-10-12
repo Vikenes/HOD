@@ -20,14 +20,15 @@ def N_s(logM, alpha, kappa, sigma_logM, logMmin, logM1):
     return nc * lambda_sat(logM, alpha, kappa, sigma_logM, logMmin, logM1) 
 
 N = 100000
-logM  = np.linspace(12, 15, N)
+logM  = np.linspace(11, 15, N)
 
 colors = ['r', 'g', 'b', 'k', 'm', 'c', 'gray', 'orange', 'purple', 'brown', 'pink']
 
 kappa       = 0.51 
-alpha       = 0.917 
-sigma_logM  = 0.692 
-log10_Mmin  = 13.5
+alpha       = 0.9168 
+sigma_logM  = 0.6915 
+# log10_Mmin  = 13.62 # Fiducial value
+log10_Mmin  = 13.5228 # Gives ng=2.174e-4 as used for emulation
 log10M1     = 14.42
 
 def plot_varying_sigma_logM():
@@ -120,10 +121,10 @@ def plot_varying_alpha():
     ax1.legend(loc='lower right')
     plt.show()
 
-# plot_varying_sigma_logM()
+plot_varying_sigma_logM()
 # plot_varying_log10_Mmin()
-# plot_varying_log10M1()
-# plot_varying_kappa()
+plot_varying_log10M1()
+plot_varying_kappa()
 plot_varying_alpha()
 exit()
 # nc = N_c(logM, alpha, kappa, sigma_logM, logMmin, 14.42)
