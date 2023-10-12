@@ -7,156 +7,174 @@ import matplotlib.pyplot as plt
 
 from pycorr import TwoPointCorrelationFunction
 
-DATA_PATH           = "/mn/stornext/d5/data/vetleav/HOD_AbacusData/c000_LCDM_simulation"
-HOD_DATA_PATH       = f"{DATA_PATH}/TPCF_emulation"
-HOD_CATALOGUES_PATH = f"{HOD_DATA_PATH}/HOD_catalogues"
-OUTPUT_PATH         = f"{HOD_DATA_PATH}/corrfunc_arrays"
+D13_BASE_PATH           = "/mn/stornext/d13/euclid_nobackup/halo/AbacusSummit"
 
-OLD_INDATAPATH      = f"{DATA_PATH}/HOD_data"
+# HOD_DATA_PATH       = f"{DATA_PATH}/TPCF_emulation"
+# HOD_CATALOGUES_PATH = f"{HOD_DATA_PATH}/HOD_catalogues"
+# OUTPUT_PATH         = f"{HOD_DATA_PATH}/corrfunc_arrays"
 
+class TPCF_ABACUS:
+    def __init__(
+            self,
+            r_bin_edges: np.array,
+            ng_fixed:    bool = True,
+            boxsize:     float = 2000.0,
+            engine:      str   = 'corrfunc',
+            nthreads:    int   = 128,
+            ):
+        self.r_bin_edges = r_bin_edges
+        self.ng_fixed    = ng_fixed
+        self.boxsize     = boxsize
+        self.engine      = engine
+        self.nthreads    = nthreads
+        
 
-def compute_TPCF_fiducial_halocat(n_bins=128, threads=12):
-    """
-    fff.keys(): catalogue data, e.g. ['host_mass', 'host_id', 'x', 'y', 'z', 'v_x', 'v_y', 'v_z', ...]
-    fff.attrs.keys(): HOD parameters, e.g. ['alpha', 'log10Mmin', 'ng', 'nc', ...]
-    
-    """
-    fff = h5py.File(f"{OLD_INDATAPATH}/halocat_fiducial.hdf5", "r")
-
-
-    x = np.array(fff['x'][:])
-    y = np.array(fff['y'][:])
-    z = np.array(fff['z'][:])
-
-    r_bin_edges = np.logspace(np.log10(0.1), np.log10(130), n_bins)
-    t0 = time.time()
-    result = TwoPointCorrelationFunction(
-        mode='s',
-        edges=r_bin_edges,
-        data_positions1=np.array([x, y, z]),
-        boxsize=2000.0,
-        engine='corrfunc',
-        nthreads=threads,
-    )
-
-    r, xi = result(
-        return_sep=True
-    )
-    duration = time.time() - t0
-    
-    print(f"Time elapsed: {duration:.2f} s")
-
-    return r, xi, duration
-
-
-
-
-
-def make_emulation_TPCF_arrays_from_halocats(ng_fixed=False, emulate_copy=False):
-    ### Change the function to only compute TPCF, i.e. return r, xi 
-    ### Move actual storing to "make_tpcf_emulation_data_files.py"
-    ### 
-    ### 
-    ### 
-
-
-
-    """
-    Halo_file: halocatalogue file for training parameters 
-     - halo_file.keys(): individual files, ['node0', 'node1', ..., 'nodeN']
-     - halo_file.attrs.keys(): cosmological parameters, e.g. ['H0', 'Om0', 'lnAs', 'n_s', ...]
-     - halo_file['nodex'].attrs.keys(): HOD parameters, e.g. ['alpha', 'log10Mmin', 'ng', 'nc', ...]
-     - halo_file['nodex'].keys(): catalogue data, e.g. ['host_radius', 'x', 'y', 'z', 'v_x', ...]
-    """
-    
-    """
-    Compute galaxy-galaxy TPCF from halocats
-    Make set for train, test, val catalogues used for emulation
-    if file exists, skip
-    """
-    
-    dataset_names = ['train', 'test', 'val']
-
-    for flag in dataset_names:
-
-        # Get filename of halo catalogue 
-        halocat_fname_suffix = f"{flag}"
+        dataset_names = ['train', 'test', 'val']
         if ng_fixed:
-            halocat_fname_suffix += "_ng_fixed"
-        halocat_fname = f"halocat_{halocat_fname_suffix}"
+            ng_suffix = "_ng_fixed"
+        else:
+            ng_suffix = ""
+        self.fname_suffix    = [f"{flag}{ng_suffix}" for flag in dataset_names]
+        self.halocat_fnames  = [f"halocat_{suffix}.hdf5" for suffix in self.fname_suffix]
+        self.TPCF_fnames     = [f"TPCF_{suffix}.hdf5" for suffix in self.fname_suffix]
 
-        # Load halo catalogue
-        halo_file   = h5py.File(f"{HOD_CATALOGUES_PATH}/{halocat_fname}.hdf5", "r")
-        N_nodes     = len(halo_file.keys()) # Number of parameter samples used to make catalogue 
-
-        # Set up separation bins. Using same bins as Cuesta-Lazaro et al. 
-        r_bins_log  = np.logspace(np.log10(0.01), np.log10(5), 40, endpoint=False)
-        r_bins_lin  = np.linspace(5.0, 150.0, 75)
-        r_bin_edges = np.concatenate((r_bins_log, r_bins_lin))
-        n_bins      = len(r_bin_edges)
+        # TO BE DECIDED:
+        # Save one TPCF array per node per catalogue
+        # or one large TPCF hdf5 file for each catalogue?
         
-        print(f"Computing TPCF for {N_nodes} nodes...")
-        t0 = time.time()
+
+    def compute_TPCF_from_gal_pos(
+            self,
+            galaxy_positions: np.ndarray,
+    ) -> np.ndarray:
+        """
+        Compute TPCF for a set of galaxy positions
+        with shape (3, N) where N is the number of galaxies
+        i.e. galaxy_positions = np.array([x, y, z])
+        """
         
-        # Compute TPCF for each node
-        for node_idx in range(N_nodes):
-            if ng_fixed:
-                outfile = Path(f"{OUTPUT_PATH}/TPCF_{flag}_node{node_idx}_ng_fixed.npy")
-            else:
-                outfile = Path(f"{OUTPUT_PATH}/TPCF_{flag}_node{node_idx}.npy")
-            
-            if outfile.exists():# and not emulate_copy:
-                print(f"File {outfile} already exists, skipping...")
-                continue
-            
-            # elif outfile.exists() and emulate_copy:
-            #     outfile_data = np.load(outfile)
-            #     emulate_outfile = outfile.parent.parent / "emulation_data" / outfile.name
-            #     if not emulate_outfile.exists():
-            #         print(f"Saving emulation copy of {outfile.parent.name}/{outfile.name} to ", end='') 
-            #         print(f"{emulate_outfile.parent.name}/{emulate_outfile.name}...")
-            #         np.save(emulate_outfile, outfile_data)
-            #     else:
-            #         print(f"Emulation copy of {outfile.name} already exists, skipping...")
+        assert galaxy_positions.shape[0] == 3, "galaxy_positions must be a 3xN array"
+        assert galaxy_positions.ndim == 2, "galaxy_positions must be a 3xN array"
 
-            #     continue 
 
-            # Load galaxy positions for node
-            node_catalogue = halo_file[f"node{node_idx}"]
-            x = np.array(node_catalogue['x'][:])
-            y = np.array(node_catalogue['y'][:])
-            z = np.array(node_catalogue['z'][:])
-
-            t0i = time.time()
-
-            # Compute TPCF
-            result = TwoPointCorrelationFunction(
+        
+        result = TwoPointCorrelationFunction(
                 mode            = 's',
-                edges           = r_bin_edges,
-                data_positions1 = np.array([x, y, z]),
-                boxsize         = 2000.0,
-                engine          = 'corrfunc',
-                nthreads        = 128,
+                edges           = self.r_bin_edges,
+                data_positions1 = galaxy_positions,
+                boxsize         = self.boxsize,
+                engine          = self.engine,
+                nthreads        = self.nthreads,
                 )
-            r, xi = result(return_sep=True)
+        r, xi = result(return_sep=True)
+        return np.array([r, xi])
+    
+    def save_TPCF_data_from_HOD_catalogue(
+            self,
+            version:    int  = 0,
+            phase:      int  = 0,
+    ):
+        SIMNAME             = f"AbacusSummit_base_c{str(version).zfill(3)}_ph{str(phase).zfill(3)}"
+        SIM_DATA_PATH       = f"{D13_BASE_PATH}/emulation_files/{SIMNAME}"
+        HOD_CATALOGUE_PATH  = f"{SIM_DATA_PATH}/HOD_catalogues"
+        OUTPUT_PATH         = f"{SIM_DATA_PATH}/TPCF_data"
+        
+        if not Path(HOD_CATALOGUE_PATH).exists():
+            print(f"Error: HOD catalogue required to make TPCF files.")
+            print(f" - Directory {HOD_CATALOGUE_PATH} not found, aborting...")
+            raise FileNotFoundError
+        else:
+            # Create output directory if it doesn't exist
+            Path(OUTPUT_PATH).mkdir(parents=False, exist_ok=True)
 
-            print(f"Time elapsed for node{node_idx}: {time.time() - t0i:.2f} s")
+        for TPCF_fname, halocat_fname in zip(self.TPCF_fnames, self.halocat_fnames):
+            halo_file   = h5py.File(f"{HOD_CATALOGUE_PATH}/{halocat_fname}", "r")
+            N_nodes     = len(halo_file.keys()) # Number of parameter samples used to make catalogue
 
-            # Save TPCF to file
-            np.save(outfile, np.array([r, xi]))
-            # if emulate_copy:
-            #     emulate_outfile = outfile.parent.parent / "emulation_data" / outfile.name
-            #     if not emulate_outfile.exists():
-            #         np.save(emulate_outfile, np.array([r, xi]))
+            OUTFILE     = f"{OUTPUT_PATH}/{TPCF_fname}"
 
-
-
-        print(f"Total time elapsed: {time.time() - t0:.2f} s")
+            if Path(OUTFILE).exists():
+                print(f"File {OUTFILE} already exists, skipping...")
+                continue
 
 
-# compute_TPCF_fiducial_halocat(n_bins=64, threads=128)
-# compute_TPCF_fiducial_halocat_halotools(n_bins=64, threads=128)
-# compute_TPCF_train_halocats_halotools(n_bins=64)
-# compute_TPCF_halocats_pycorr(n_bins=115, ng_fixed=True, flag="test")
-# compute_TPCF_halocats_pycorr(n_bins=115, ng_fixed=True, flag="test", emulate_copy=True)
-make_emulation_TPCF_arrays_from_halocats(ng_fixed=True, emulate_copy=True)
+            print(f"Computing all {N_nodes} TPCF's for {SIMNAME}...", end=" ")
+            t0 = time.time()
+            # fff = h5py.File(OUTFILE, "w")
+            # Compute TPCF for each node
+            for node_idx in range(N_nodes):
+                # Load galaxy positions for node from halo catalogue
+                HOD_node_catalogue = halo_file[f"node{node_idx}"]
+                x = np.array(HOD_node_catalogue['x'][:])
+                y = np.array(HOD_node_catalogue['y'][:])
+                z = np.array(HOD_node_catalogue['z'][:])
+                galaxy_positions = np.array([x, y, z])
+                
+                # Compute TPCF 
+                r, xi = self.compute_TPCF_from_gal_pos(galaxy_positions)
+                print(f"Done. Took {time.time() - t0:.2f} s")
+                """
+                TESTING
+                """
+                exit()
+
+
+                # Save TPCF to file
+                # node_group = fff.create_group(f'node{node_idx}')
+                # node_group.create_dataset("r",  data=r)
+                # node_group.create_dataset("xi", data=xi)
+
+            
+            # fff.close()
+            print(f"Done. Took {time.time() - t0:.2f} s")
+        
+    def save_TPCF_all_versions(
+            self,
+            parallel:               bool = True,
+            c000_phases:            bool = True,
+            c001_c004:              bool = True,
+            linear_derivative_grid: bool = True,
+            broad_emulator_grid:    bool = True,
+        ):
+
+        if c000_phases:
+            phases   = np.arange(0, 25)
+            for phase in phases:
+                self.save_TPCF_data_from_HOD_catalogue(
+                    version = 0, 
+                    phase   = phase)
+            
+        if c001_c004:
+            versions = np.arange(1, 5)
+            for version in versions:
+                self.save_TPCF_data_from_HOD_catalogue(
+                    version = version, 
+                    phase   = 0)
+        
+        if linear_derivative_grid:
+            versions = np.arange(100, 127)
+            for version in versions:
+                self.save_TPCF_data_from_HOD_catalogue(
+                    version = version, 
+                    phase   = 0)
+        
+        if broad_emulator_grid:
+            versions = np.arange(130, 182)
+            for version in versions:
+                self.save_TPCF_data_from_HOD_catalogue(
+                    version = version, 
+                    phase   = 0)
+
+# Use same bins as Cuesta-Lazaro et al.
+r_bin_edges = np.concatenate((
+    np.logspace(np.log10(0.01), np.log10(5), 40, endpoint=False),
+    np.linspace(5.0, 150.0, 75)
+    ))
+
+            
+tt = TPCF_ABACUS(
+    r_bin_edges=r_bin_edges, 
+    ng_fixed=True,
+    )
+
+tt.save_TPCF_all_versions()
