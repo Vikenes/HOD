@@ -102,7 +102,6 @@ def make_hdf5_files_single_version(
 
         # Loop over HOD parameters 
         # Populate halos with galaxies for each HOD parameter set 
-        notes.append("Test parallelization here vs over the versions")
 
         t0_flag = time.time()
         t0_flag_total = time.time()
@@ -228,7 +227,11 @@ def make_hdf5_files_non_emulator_versions(parallel=True):
             executor.map(make_hdf5_files_single_version, [v for v in versions], [0 for v in versions])
     print(f"Total duration: {time.time() - t000:.2f} sec")
 
-
+make_hdf5_files_single_version(
+    version=4,
+    phase=0,
+    ng_fixed=True
+    )
 
 # make_hdf5_files_c000_all_phases(parallel=True)
 # make_hdf5_files_all_emulator_versions(parallel=True)
