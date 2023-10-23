@@ -12,6 +12,8 @@ from pathlib import Path
 import pandas as pd
 import sys 
 
+from numdens_HOD import estimate_log10Mmin_from_gal_num_density
+
 # import warnings
 # warnings.filterwarnings("ignore")
 
@@ -169,23 +171,42 @@ def make_hdf5_files(ng_fixed=True, pos_only=False):
 
         fff.close()
 
-def make_HOD_fiducial(pos_only=False):
+def make_HOD_fiducial_cosmology(
+        ng_fixed=True,
+        pos_only=False,
+        ):
     """
     Generate HOD parameters for the fiducial model.
     Only used to test implementation in the beginning, and as a reference point for parameter values. 
     """
 
-    if Path((f"{OUTFILEPATH}/halocat_fiducial.hdf5")).exists():
+    if ng_fixed:
+        fname_suffix = "_ng_fixed"
+    else:
+        fname_suffix = ""
+
+    outfname = f"halocat_fiducial_cosmology{fname_suffix}.hdf5"
+    OUTFILE  = f"{OUTFILEPATH}/{outfname}"
+
+    if Path((OUTFILE)).exists():
             print(f"File {OUTFILEPATH}/halocat_fiducial.hdf5 already exists, skipping...")
             return 
 
-    fff = h5py.File(f"{OUTFILEPATH}/halocat_fiducial.hdf5", "w")
-
-    log10Mmin   = 13.62 # h^-1 Msun
     sigma_logM  = 0.6915
     log10M1     = 14.42 # h^-1 Msun
     kappa       = 0.51
     alpha       = 0.9168
+    if ng_fixed:
+        log10Mmin = estimate_log10Mmin_from_gal_num_density(
+            sigma_logM_array = sigma_logM, 
+            log10M1_array    = log10M1, 
+            kappa_array      = kappa, 
+            alpha_array      = alpha,
+            ng_desired       = 2.174e-4)[0]
+    else:
+        log10Mmin   = 13.62 # h^-1 Msun
+
+    
     node_params = [log10Mmin, sigma_logM, log10M1, kappa, alpha]
 
     cosmology = Cosmology.from_custom(run=0, emulator_data_path=DATA_PATH)
@@ -211,6 +232,8 @@ def make_HOD_fiducial(pos_only=False):
     t0 = time.time()
 
     # HOD_group = fff.create_group(f"node{node_idx}") 
+    fff = h5py.File(OUTFILE, "w")
+
 
     fff.attrs['log10Mmin']     = node_params[0]
     fff.attrs['sigma_logM']    = node_params[1]
@@ -273,5 +296,4 @@ def make_HOD_fiducial(pos_only=False):
     fff.close()
 
 
-
-make_hdf5_files(ng_fixed=True, pos_only=True)
+# make_HOD_fiducial_cosmology(ng_fixed=True, pos_only=False)
