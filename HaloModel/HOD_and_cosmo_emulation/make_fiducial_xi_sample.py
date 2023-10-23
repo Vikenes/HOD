@@ -3,6 +3,7 @@ import pandas as pd
 import time
 from pathlib import Path
 import h5py 
+from pycorr import TwoPointCorrelationFunction
 
 from numdens_HOD import estimate_log10Mmin_from_gal_num_density
 
@@ -16,13 +17,17 @@ from hmd.populate import HODMaker
 
 D13_BASE_PATH       = "/mn/stornext/d13/euclid_nobackup/halo/AbacusSummit"
 D13_EMULATION_PATH  = f"{D13_BASE_PATH}/emulation_files"
+SIMNAME             = "AbacusSummit_base_c000_ph000"
+HOD_DATA_PATH       = f"{D13_EMULATION_PATH}/{SIMNAME}"
 
+HOD_PARAMETERS_PATH = Path(f"{D13_EMULATION_PATH}/{SIMNAME}/HOD_parameters")
+HOD_CATALOGUE_PATH  = f"{HOD_DATA_PATH}/HOD_catalogues"
+HALO_ARRAYS_PATH    = f"{HOD_DATA_PATH}/pos_vel_mass_arrays" # directory with pos, vel, mass arrays
+TPCF_DATA_PATH      = f"{HOD_DATA_PATH}/TPCF_data"
 
 def make_csv_file(
         fix_ng:     bool  = True,
         ng_desired: float = 2.174e-4, # h^3 Mpc^-3
-        version:    int   = 0,
-        phase:      int   = 0,
         ):
     """
     Create parameter datasets with LHS sampler.
@@ -46,18 +51,10 @@ def make_csv_file(
         log10Mmin           = 13.62 # h^-1 Msun
 
     # Create parameter files. 
-    version_str = str(version).zfill(3)
-    phase_str   = str(phase).zfill(3)
-    simname     = f"AbacusSummit_base_c{version_str}_ph{phase_str}"
 
     # Check if simulation data exists, if not, raise error
     # Prevents creation of files for non-existing simulations!
-    if not Path(f"{D13_BASE_PATH}/{simname}").exists(): 
-        print(f"Error: simulation '{simname}' does not exist. ")
-        raise FileNotFoundError
-    
-    HOD_PARAMETERS_PATH = Path(f"{D13_EMULATION_PATH}/{simname}/HOD_parameters")
-    HOD_PARAMETERS_PATH.mkdir(parents=True, exist_ok=True)
+    HOD_PARAMETERS_PATH.mkdir(parents=False, exist_ok=True)
 
     fname = f"HOD_parameters_fiducial"
     if fix_ng:
@@ -105,22 +102,17 @@ def make_HOD_catalogue_hdf5_file(
         ng_fixed:   bool = True
         ):
 
-    simname             = f"AbacusSummit_base_c000_ph000"
-    HOD_DATA_PATH       = f"{D13_EMULATION_PATH}/{simname}"
-    OUTFILEPATH         = f"{HOD_DATA_PATH}/HOD_catalogues"
-    HOD_PARAMETERS_PATH = f"{HOD_DATA_PATH}/HOD_parameters"
-    HALO_ARRAYS_PATH    = f"{HOD_DATA_PATH}/pos_vel_mass_arrays" # directory with pos, vel, mass arrays
 
-    Path(OUTFILEPATH).mkdir(parents=False, exist_ok=True)
+    Path(HOD_CATALOGUE_PATH).mkdir(parents=False, exist_ok=True)
 
-    print(f"Making fiducial HOD hdf5 file for {simname}, ...")
+    print(f"Making fiducial HOD hdf5 file for {SIMNAME}, ...")
 
     filename_suffix = "fiducial"
     if ng_fixed:
         filename_suffix += "_ng_fixed"
     
     outfname = f"halocat_{filename_suffix}.hdf5"
-    OUTFILE = Path((f"{OUTFILEPATH}/{outfname}"))
+    OUTFILE = Path((f"{HOD_CATALOGUE_PATH}/{outfname}"))
     if OUTFILE.exists():
         # Prevent overwriting to save time 
         print(f"File {OUTFILE} already exists, skipping...")
@@ -135,7 +127,7 @@ def make_HOD_catalogue_hdf5_file(
     boxsize   = 2000.0
 
     # # Make hdf5 file
-    fff = h5py.File(f"{OUTFILEPATH}/{outfname}", "w")
+    fff = h5py.File(f"{HOD_CATALOGUE_PATH}/{outfname}", "w")
     
     # # Store cosmology and simulation info in hdf5 file
     fff.attrs["boxsize"]            = boxsize
@@ -243,8 +235,60 @@ def make_HOD_catalogue_hdf5_file(
                 )
 
     fff.close()
-    print(f"{simname}-fiducial complete. Duration: {time.time() - t0:.2f} sec.")
+    print(f"{SIMNAME}-fiducial complete. Duration: {time.time() - t0:.2f} sec.")
 
+
+def make_TPCF_data_from_HOD_catalogue(threads=40):
+    # Create output directory if it doesn't exist
+    Path(TPCF_DATA_PATH).mkdir(parents=False, exist_ok=True)
+    fname       = f"TPCF_fiducial_ng_fixed.hdf5"
+    OUTFILE     = f"{TPCF_DATA_PATH}/{fname}"
+    
+
+    if Path(OUTFILE).exists():
+        print(f"File {OUTFILE} already exists, skipping...")
+        return 
+
+    halo_file   = h5py.File(f"{HOD_CATALOGUE_PATH}/halocat_fiducial_ng_fixed.hdf5", "r")
+    N_nodes     = len(halo_file.keys()) # Number of parameter samples used to make catalogue
+
+    r_bin_edges = np.concatenate((
+        np.logspace(np.log10(0.01), np.log10(5), 40, endpoint=False),
+        np.linspace(5.0, 150.0, 75)
+    ))
+
+    print(f"Computing {fname}...")
+    t0 = time.time()
+    fff = h5py.File(OUTFILE, "w")
+    # Compute TPCF for each node
+    for node_idx in range(N_nodes):
+        # Load galaxy positions for node from halo catalogue
+        HOD_node_catalogue = halo_file[f"node{node_idx}"]
+        x = np.array(HOD_node_catalogue['x'][:])
+        y = np.array(HOD_node_catalogue['y'][:])
+        z = np.array(HOD_node_catalogue['z'][:])
+        
+        # Compute TPCF 
+        result = TwoPointCorrelationFunction(
+                mode            = 's',
+                edges           = r_bin_edges,
+                data_positions1 = np.array([x, y, z]),
+                boxsize         = halo_file.attrs['boxsize'],
+                engine          = "corrfunc",
+                nthreads        = 20,
+                )
+        r, xi = result(return_sep=True)
+       
+        # Save TPCF to file
+        node_group = fff.create_group(f'node{node_idx}')
+        node_group.create_dataset("r",  data=r)
+        node_group.create_dataset("xi", data=xi)
+
+    print(f"Done. Took {time.time() - t0:.2f} s")
+    fff.close()
+    halo_file.close()
 
 # make_csv_file()
 # make_HOD_catalogue_hdf5_file()
+
+make_TPCF_data_from_HOD_catalogue()
