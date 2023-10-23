@@ -1,4 +1,5 @@
 import numpy as np 
+from numpy.typing import ArrayLike
 import h5py 
 import time 
 from dq import Cosmology
@@ -45,42 +46,44 @@ def compute_ng_analytical(log10Mmin, sigma_logM, log10M1, kappa, alpha, mass_cen
 
 
 def estimate_log10Mmin_from_gal_num_density(
-        sigma_logM_array=None,
-        log10M1_array=None,
-        kappa_array=None,
-        alpha_array=None,
-        ng_desired=2.174e-4, 
-        version=0,
-        phase=0,
-        test = False
-        ):
+        sigma_logM_array: ArrayLike,
+        log10M1_array:    ArrayLike,
+        kappa_array:      ArrayLike,
+        alpha_array:      ArrayLike,
+        ng_desired:       float = 2.174e-4, 
+        version:          int = 0,
+        phase:            int = 0,
+        test:             bool = False
+        ) -> ArrayLike:
+    
+    """
+    Finds the appropriate value of log10Mmin that yields ng = ng_desired.
+    Computes ng with Eq. (19) in https://doi.org/10.1093/mnras/stad1207
+    """
 
     # Halo data 
-    version_str      = str(version).zfill(3)
-    phase_str        = str(phase).zfill(3)
-    version_dir      = f"AbacusSummit_base_c{version_str}_ph{phase_str}"
+    version_dir      = f"AbacusSummit_base_c{str(version).zfill(3)}_ph{str(phase).zfill(3)}"
     SIMULATION_DIR   = f"{D13_BASE_PATH}/{version_dir}"
     POS_VEL_MASS_ARRAYS_PATH = f"{SIMULATION_DIR}/pos_vel_mass_arrays"
     if not Path(POS_VEL_MASS_ARRAYS_PATH).exists():
         print(f"Error: {POS_VEL_MASS_ARRAYS_PATH} does not exist")
-        print("Please store arrays of pos, vel and mass in this directory to fix ng.")
+        print(" - Halo pos,vel,mass must be stored in this directory to constrain ng.")
         return
 
     ### Make halo catalogue 
-    # Define cosmology and simparams 
-    if version != 0 and phase == 0:
-        print("MAKE SURE COSMOLOGY CLASS WORKS CORRECTLY WITH NEFF AND EOS BEFORE PROCEEDING")
-        exit()
 
+    # Define cosmology and simparams 
     cosmology   = Cosmology.from_custom(run=0, emulator_data_path=SIMULATION_DIR)
     redshift    = 0.25 
     boxsize     = 2000.0
 
-    pos  = np.load(f"{POS_VEL_MASS_ARRAYS_PATH}/L1_pos.npy") 
-    vel  = np.load(f"{POS_VEL_MASS_ARRAYS_PATH}/L1_vel.npy")
-    mass = np.load(f"{POS_VEL_MASS_ARRAYS_PATH}/L1_mass.npy")
+    # Load halo pos,vel,mass arrays
+    pos  = np.load(f"{POS_VEL_MASS_ARRAYS_PATH}/L1_pos.npy")  # shape: (N_halos, 3)
+    vel  = np.load(f"{POS_VEL_MASS_ARRAYS_PATH}/L1_vel.npy")  # shape: (N_halos, 3)
+    mass = np.load(f"{POS_VEL_MASS_ARRAYS_PATH}/L1_mass.npy") # shape: (N_halos,)
+    
     # Make halo catalogue
-    # Used to compute the HMF which is needed to compute ng
+    # Used to compute the HMF which is needed to compute ng (see https://doi.org/10.1093/mnras/stad1207)
     halocat = HaloCatalogue(
         pos,
         vel,
