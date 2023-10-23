@@ -88,8 +88,6 @@ class TPCF_ABACUS:
             Path(OUTPUT_PATH).mkdir(parents=False, exist_ok=True)
 
         for TPCF_fname, halocat_fname in zip(self.TPCF_fnames, self.halocat_fnames):
-            halo_file   = h5py.File(f"{HOD_CATALOGUE_PATH}/{halocat_fname}", "r")
-            N_nodes     = len(halo_file.keys()) # Number of parameter samples used to make catalogue
 
             OUTFILE     = f"{OUTPUT_PATH}/{TPCF_fname}"
 
@@ -97,10 +95,12 @@ class TPCF_ABACUS:
                 print(f"File {OUTFILE} already exists, skipping...")
                 continue
 
+            halo_file   = h5py.File(f"{HOD_CATALOGUE_PATH}/{halocat_fname}", "r")
+            N_nodes     = len(halo_file.keys()) # Number of parameter samples used to make catalogue
 
-            print(f"Computing all {N_nodes} TPCF's for {SIMNAME}...", end=" ")
+            print(f"Computing all {N_nodes} {TPCF_fname} for {SIMNAME}...", end=" ")
             t0 = time.time()
-            # fff = h5py.File(OUTFILE, "w")
+            fff = h5py.File(OUTFILE, "w")
             # Compute TPCF for each node
             for node_idx in range(N_nodes):
                 # Load galaxy positions for node from halo catalogue
@@ -108,35 +108,36 @@ class TPCF_ABACUS:
                 x = np.array(HOD_node_catalogue['x'][:])
                 y = np.array(HOD_node_catalogue['y'][:])
                 z = np.array(HOD_node_catalogue['z'][:])
-                galaxy_positions = np.array([x, y, z])
                 
                 # Compute TPCF 
-                r, xi = self.compute_TPCF_from_gal_pos(galaxy_positions)
-                print(f"Done. Took {time.time() - t0:.2f} s")
-                """
-                TESTING
-                """
-                exit()
-
+                r, xi = self.compute_TPCF_from_gal_pos(
+                    galaxy_positions=np.array([x, y, z])
+                    )
 
                 # Save TPCF to file
-                # node_group = fff.create_group(f'node{node_idx}')
-                # node_group.create_dataset("r",  data=r)
-                # node_group.create_dataset("xi", data=xi)
+                node_group = fff.create_group(f'node{node_idx}')
+                node_group.create_dataset("r",  data=r)
+                node_group.create_dataset("xi", data=xi)
 
-            
-            # fff.close()
             print(f"Done. Took {time.time() - t0:.2f} s")
+            fff.close()
+            halo_file.close()
         
     def save_TPCF_all_versions(
             self,
-            parallel:               bool = True,
-            c000_phases:            bool = True,
-            c001_c004:              bool = True,
-            linear_derivative_grid: bool = True,
-            broad_emulator_grid:    bool = True,
+            c000_phases:            bool = False,
+            c001_c004:              bool = False,
+            linear_derivative_grid: bool = False,
+            broad_emulator_grid:    bool = False,
         ):
-
+        """
+        With nthreads=128, each TPCF takes roughly 1s to compute. 
+        However, with several hundreds needing to be computed for each version,
+        there is a lot of overhead, and it seems to not activate each node fully before completion. 
+        It might therefore be faster to compute the TPCF's in parallel for N versions 
+        simultaneously, using nthreads=128/N to compute the TPCF's. 
+        However, one should be cautious, to ensure that file writing is done correctly.  
+        """
         if c000_phases:
             phases   = np.arange(0, 25)
             for phase in phases:
@@ -175,6 +176,19 @@ r_bin_edges = np.concatenate((
 tt = TPCF_ABACUS(
     r_bin_edges=r_bin_edges, 
     ng_fixed=True,
+    nthreads=128
     )
 
-tt.save_TPCF_all_versions()
+#tt.save_TPCF_all_versions(
+#    c000_phases=False,
+#    c001_c004=False,
+#    linear_derivative_grid=True,
+#    broad_emulator_grid=False,
+#)
+
+tt.save_TPCF_all_versions(
+    c000_phases=False,
+    c001_c004=False,
+    linear_derivative_grid=False,
+    broad_emulator_grid=True,
+)
