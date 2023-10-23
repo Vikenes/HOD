@@ -1,8 +1,7 @@
 import numpy as np 
-import h5py 
+from numpy.typing import ArrayLike
 import time 
 from dq import Cosmology
-# import hmd
 from hmd.concentration import diemer15
 from hmd.catalogue import HaloCatalogue
 
@@ -124,13 +123,24 @@ def compute_ng_analytical(log10Mmin, sigma_logM, log10M1, kappa, alpha, mass_cen
 
 
 def estimate_log10Mmin_from_gal_num_density(
-        sigma_logM_array=None,
-        log10M1_array=None,
-        kappa_array=None,
-        alpha_array=None,
-        ng_desired=2.174e-4, 
-        test=False,
-        ):
+        sigma_logM_array:   ArrayLike,
+        log10M1_array:      ArrayLike,
+        kappa_array:        ArrayLike,
+        alpha_array:        ArrayLike,
+        ng_desired:         float = 2.174e-4, 
+        test:               bool  = False,
+        ) -> ArrayLike:
+    
+    # Allow for the *_array parameters to be floats or ints
+    # Convert these to arrays of size 1
+
+    if isinstance(sigma_logM_array, float):
+        # If sigma_logM_array is a scalar, so are the other parameters
+        # convert all to a single element 1D array
+        sigma_logM_array = np.array([sigma_logM_array])
+        log10M1_array = np.array([log10M1_array])
+        kappa_array = np.array([kappa_array])
+        alpha_array = np.array([alpha_array])
 
 
     ### Make halo catalogue 
@@ -139,9 +149,9 @@ def estimate_log10Mmin_from_gal_num_density(
     redshift    = 0.25 
     boxsize     = 2000.0
     # Halo data 
-    pos  = np.load(f"{HALO_ARRAYS_PATH}/L1_pos.npy") 
-    vel  = np.load(f"{HALO_ARRAYS_PATH}/L1_vel.npy")
-    mass = np.load(f"{HALO_ARRAYS_PATH}/L1_mass.npy")
+    pos  = np.load(f"{HALO_ARRAYS_PATH}/L1_pos.npy")  # shape: (N_halos, 3)
+    vel  = np.load(f"{HALO_ARRAYS_PATH}/L1_vel.npy")  # shape: (N_halos, 3) 
+    mass = np.load(f"{HALO_ARRAYS_PATH}/L1_mass.npy") # shape: (N_halos,)
     # Make halo catalogue
     # Used to compute the HMF which is needed to compute ng
     halocat = HaloCatalogue(
