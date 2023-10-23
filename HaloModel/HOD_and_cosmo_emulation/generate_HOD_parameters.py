@@ -67,13 +67,8 @@ def make_csv_files(
         simname     = f"AbacusSummit_base_c{version_str}_ph{phase_str}"
 
         # Check if simulation data exists, if not, raise error
-        # Prevents creation of files for non-existing simulations!
-        if not Path(f"{D13_BASE_PATH}/{simname}").exists(): 
-            print(f"Error: simulation '{simname}' does not exist. ")
-            raise FileNotFoundError
-        
         HOD_PARAMETERS_PATH = Path(f"{D13_EMULATION_PATH}/{simname}/HOD_parameters")
-        HOD_PARAMETERS_PATH.mkdir(parents=True, exist_ok=True)
+        HOD_PARAMETERS_PATH.mkdir(parents=False, exist_ok=True) # Prevent creation of of files for non-existing simulations
 
         fname = f"HOD_parameters_{dataset}"
         if fix_ng:
@@ -207,7 +202,7 @@ def make_csv_files_broad_emulator_grid(parallel=True):
 
 def make_csv_files_linear_derivative_grid(parallel=True, include_c00_=True):
     if include_c00_:
-        version_range = np.arange(1,4)
+        version_range = np.arange(1,5)
         version_range = np.concatenate((version_range, np.arange(100,127)))
     else:
         version_range = range(100,127)
@@ -244,6 +239,10 @@ def make_csv_files_c000_all_phases(parallel=True):
                 phase       = ph,
             )
     print("Done.")
+
+
+
+make_csv_files(version=4, phase=0, test=False)
 
 # make_csv_files_linear_derivative_grid(parallel=True, include_c00_=True)
 # make_csv_files_broad_emulator_grid(parallel=True)
