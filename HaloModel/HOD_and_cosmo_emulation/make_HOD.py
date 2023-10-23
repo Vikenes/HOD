@@ -36,11 +36,7 @@ def make_hdf5_files_single_version(
     HOD_PARAMETERS_PATH = f"{HOD_DATA_PATH}/HOD_parameters"
     HALO_ARRAYS_PATH    = f"{HOD_DATA_PATH}/pos_vel_mass_arrays" # directory with pos, vel, mass arrays
 
-    if not Path(HOD_DATA_PATH).exists():
-        print(f"Error: Simulation path {HOD_DATA_PATH} does not exist, aborting...")
-        raise FileNotFoundError
-
-    Path(OUTFILEPATH).mkdir(parents=True, exist_ok=True)
+    Path(OUTFILEPATH).mkdir(parents=False, exist_ok=True) # Create directory if it doesn't exist and don't create if parent doesn't exist
 
     print(f"Making hdf5 files for {simname}...")
     t0_total = time.time()
