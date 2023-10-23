@@ -53,15 +53,14 @@ def make_hdf5_files_single_version(
             print(f"File {OUTFILE} already exists, skipping...")
             continue
 
-        
-        # Make hdf5 file
-        fff = h5py.File(f"{OUTFILEPATH}/{outfname}", "w")
-
         # Set up cosmology and simulation info 
         # Uses the cosmology.dat file found in the HOD_DATA_PATH
         cosmology = Cosmology.from_custom(run=0, emulator_data_path=HOD_DATA_PATH)
         redshift  = 0.25 
         boxsize   = 2000.0
+        
+        # Make hdf5 file
+        fff = h5py.File(f"{OUTFILEPATH}/{outfname}", "w")
 
         # Store cosmology and simulation info in hdf5 file
         fff.attrs["boxsize"]            = boxsize
