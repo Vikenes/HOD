@@ -12,16 +12,22 @@ HOD_DATA_PATH       = f"{DATA_PATH}/TPCF_emulation"
 HOD_CATALOGUES_PATH = f"{HOD_DATA_PATH}/HOD_catalogues"
 OUTPUT_PATH         = f"{HOD_DATA_PATH}/corrfunc_arrays"
 
-OLD_INDATAPATH      = f"{DATA_PATH}/HOD_data"
-
-
-def compute_TPCF_fiducial_halocat(n_bins=128, threads=12):
+def compute_TPCF_fiducial_halocat(
+        n_bins:   int  = 128, 
+        threads:  int  = 128,
+        ng_fixed: bool = True,
+        ):
     """
     fff.keys(): catalogue data, e.g. ['host_mass', 'host_id', 'x', 'y', 'z', 'v_x', 'v_y', 'v_z', ...]
     fff.attrs.keys(): HOD parameters, e.g. ['alpha', 'log10Mmin', 'ng', 'nc', ...]
     
     """
-    fff = h5py.File(f"{OLD_INDATAPATH}/halocat_fiducial.hdf5", "r")
+    if ng_fixed:
+        fname_suffix = "_ng_fixed"
+    else:
+        fname_suffix = ""
+    halocat_fname = f"halocat_fiducial_cosmology{fname_suffix}.hdf5"
+    fff = h5py.File(f"{HOD_CATALOGUES_PATH}/{halocat_fname}", "r")
 
 
     x = np.array(fff['x'][:])
@@ -42,14 +48,15 @@ def compute_TPCF_fiducial_halocat(n_bins=128, threads=12):
     r, xi = result(
         return_sep=True
     )
+    # REMOVE DURATION??
     duration = time.time() - t0
     
     print(f"Time elapsed: {duration:.2f} s")
-
     return r, xi, duration
 
 
-
+compute_TPCF_fiducial_halocat(ng_fixed=False)
+exit()
 
 
 def make_emulation_TPCF_arrays_from_halocats(ng_fixed=False, emulate_copy=False):
