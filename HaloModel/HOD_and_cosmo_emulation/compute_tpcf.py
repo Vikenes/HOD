@@ -21,12 +21,15 @@ class TPCF_ABACUS:
             boxsize:     float = 2000.0,
             engine:      str   = 'corrfunc',
             nthreads:    int   = 128,
+            use_sep_avg: bool  = False,
             ):
-        self.r_bin_edges = r_bin_edges
-        self.ng_fixed    = ng_fixed
-        self.boxsize     = boxsize
-        self.engine      = engine
-        self.nthreads    = nthreads
+        self.r_bin_edges    = r_bin_edges
+        self.r_bin_centers  = (r_bin_edges[1:] + r_bin_edges[:-1]) / 2.0
+        self.ng_fixed       = ng_fixed
+        self.boxsize        = boxsize
+        self.engine         = engine
+        self.nthreads       = nthreads
+        self.use_sep_avg    = use_sep_avg
         
 
         dataset_names = ['train', 'test', 'val']
@@ -66,8 +69,14 @@ class TPCF_ABACUS:
                 engine          = self.engine,
                 nthreads        = self.nthreads,
                 )
-        r, xi = result(return_sep=True)
-        return np.array([r, xi])
+        
+        if self.use_sep_avg:
+            r, xi = result(return_sep=True)
+            return np.array([r, xi])
+        
+        else:
+            xi = result(return_sep=False)
+            return np.array([self.r_bin_centers, xi])
     
     def save_TPCF_data_from_HOD_catalogue(
             self,
