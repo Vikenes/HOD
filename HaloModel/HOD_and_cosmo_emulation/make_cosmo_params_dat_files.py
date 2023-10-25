@@ -2,47 +2,51 @@ import asdf
 import numpy as np
 import pandas as pd
 from pathlib import Path
+from typing import Optional
 
 """
 Create a .dat table of cosmological parameters for the AbacusSummit simulations
 Used to define the cosmology needed to create the HOD catalogues.
 """
 
-ABACUSPATH = Path("/mn/stornext/d13/euclid_nobackup/halo/AbacusSummit")
-EMULATION_PATH = Path(ABACUSPATH / "emulation_files")
-HODPATH = Path("/mn/stornext/d5/data/vetleav/HOD_AbacusData")
-C000PATH = Path(HODPATH / "c000_LCDM_simulation") 
-LOCALPATH = Path(".")
+D13_BASE_PATH       = Path("/mn/stornext/d13/euclid_nobackup/halo/AbacusSummit")
+D13_EMULATION_PATH  = Path(D13_BASE_PATH / "emulation_files")
+OUTFILENAME = filename = Path(f"cosmological_parameters.dat") # Same filename for all simulations
 
-N_versions = 52
-N_files_per_version = 34 
-# allowed_files  = [str(i).zfill(3) for i in range(N_files_per_version)]
+csv_column_names = ['omega_b', 'omega_cdm', 'h', 
+                    'A_s', 'n_s', 'alpha_s', 
+                    'N_ur', 'N_ncdm', 'omega_ncdm', 
+                    'w0_fld', 'wa_fld', 'sigma8_m', 
+                    'sigma8_cb']
 
 def get_asdf_version_header(
         version: int = 130,
         phase:   int = 0,
         ):
     """
-    Return the filename of the asdf file for a given version and file number
+    Return the header of the asdf file for a given version and file number
     """
-    version_str = str(version).zfill(3)
-    phase_str   = str(phase).zfill(3)
-    simulation  = Path(ABACUSPATH / f"AbacusSummit_base_c{version_str}_ph{phase_str}/halos/z0.250/halo_info/")
+    simname     = Path(f"AbacusSummit_base_c{str(version).zfill(3)}_ph{str(phase).zfill(3)}")
+    simulation  = Path(D13_BASE_PATH / simname / "halos/z0.250/halo_info/")
 
 
-    if simulation.exists():
-        asdf_filename = Path(simulation / "halo_info_000.asdf")
-        
-    else:
+    if not simulation.exists():        
         print(f"Error: directory {simulation} does not exist")
         return
-    af = asdf.open(asdf_filename)#['header']
+    
+    # Same header for all files, load the first one 
+    asdf_filename = Path(simulation / "halo_info_000.asdf")
+    
+    af = asdf.open(asdf_filename)
     header = af['header']
     af.close()
     return header 
 
-def get_sim_params_from_csv_table(version=130):
-    cosmologies_file    = Path(ABACUSPATH / "cosmologies.csv")
+def get_sim_params_from_csv_table(
+        version:    int = 130,
+        param_name: Optional[str] = None,):
+    
+    cosmologies_file    = Path(D13_BASE_PATH / "cosmologies.csv")
     cosmologies         = pd.read_csv(cosmologies_file)
 
     ## Get the index of the version
@@ -55,22 +59,28 @@ def get_sim_params_from_csv_table(version=130):
     
     sim_params          = cosmologies.iloc[idx]#[2:] # LCDM parameters
 
-    version_csv = int(sim_params.iloc[0].strip()[-3:])
-    if version_csv != version:
-        print(f"Error: version {version} does not match version in csv file {version_csv}")
+    # Check that the version number in the csv file matches the version argument 
+    version_number_csv = int(sim_params.iloc[0].strip()[-3:])
+    if version_number_csv != version:
+        print(f"Error: version {version} does not match version in csv file {version_number_csv}")
         exit()
     
-    return sim_params
+    if param_name is None:
+        print("param_name is None")
+        # Return all parameters
+        return sim_params
+    
+    else:
+        if param_name not in csv_column_names:
+            print(f"Error: parameter {param_name} not found in csv_column_names")
+            exit()
+        for i in range(2, len(sim_params)):
+            key = sim_params.index[i].strip()
+            if key == param_name:
+                return sim_params.iloc[i]
 
-def get_As_from_csv_table(version=130):
-    sim_params = get_sim_params_from_csv_table(version=version)
-    As = sim_params.iloc[5]
-    return As
-
-def get_sigma8m_from_csv_table(version=130):
-    sim_params = get_sim_params_from_csv_table(version=version)
-    sigma8m = sim_params.iloc[13]
-    return sigma8m
+    print(f"Error: Something went wrong.")
+    exit()
 
 
 def save_cosmo_parameters_c000_all_phases(version=0):
@@ -84,11 +94,13 @@ def save_cosmo_parameters_c000_all_phases(version=0):
     wb          = header['omega_b']
     wc          = header['omega_cdm']
     Ol          = header['Omega_DE']
-    As          = get_As_from_csv_table(version=version)
-    lnAs        = np.log(As * 1.0e10)
+    As          = get_sim_params_from_csv_table(version=version, param_name="A_s")
+    ln1e10As    = np.log(As * 1.0e10)
     ns          = header['n_s']
     w           = header['w']
-    sigma8      = get_sigma8m_from_csv_table(version=version) 
+    w0          = header["w0"]
+    wa          = header["wa"]
+    sigma8      = get_sim_params_from_csv_table(version=version, param_name="sigma8_m") 
     Om          = header['Omega_M']
     h           = header['H0'] / 100.0     
     N_eff       = header['N_ncdm'] + header['N_ur']
@@ -99,9 +111,11 @@ def save_cosmo_parameters_c000_all_phases(version=0):
         'wb'        : wb,
         'wc'        : wc,
         'Ol'        : Ol,
-        'lnAs'      : lnAs,
+        'ln1e10As'  : ln1e10As,
         'ns'        : ns,
         'w'         : w,
+        'w0'        : w0,
+        'wa'        : wa,
         'sigma8'    : sigma8,
         'Om'        : Om,
         'h'         : h,
@@ -109,16 +123,14 @@ def save_cosmo_parameters_c000_all_phases(version=0):
     }, index=[0])
 
     # Store df in each phase directory
-    filename = Path(f"cosmological_parameters.dat")
-    print(f"Saving {filename} for all phases.")
+    print(f"Saving {OUTFILENAME} for all phases of c000.")
     for ph in range(0, 25):
-        phase_str = str(ph).zfill(3)
-        VERSIONPATH = Path(EMULATION_PATH / f"AbacusSummit_base_c000_ph{phase_str}")
+        VERSIONPATH = Path(D13_EMULATION_PATH / f"AbacusSummit_base_c000_ph{str(ph).zfill(3)}")
         VERSIONPATH.mkdir(parents=True, exist_ok=True)
-        filename = Path("cosmological_parameters.dat")
-        paramfile = Path(VERSIONPATH / filename)
+
+        paramfile = Path(VERSIONPATH / OUTFILENAME)
         if paramfile.exists():
-            print(f"Error: file {filename} already exists. Skipping.")
+            print(f"Error: file {OUTFILENAME} already exists. Skipping.")
             continue
 
         df.to_csv(paramfile, index=False, sep=" ")
@@ -127,19 +139,17 @@ def save_cosmo_parameters_c000_all_phases(version=0):
 
 
 def save_cosmo_parameters_all_versions():
-    filename = Path("cosmological_parameters.dat")
-    versions = np.arange(0,4)
+    versions = np.arange(0,5)
     versions = np.concatenate((versions, np.arange(100, 127)))
     versions = np.concatenate((versions, np.arange(130,182)))
-    print("Saving cosmological parameters for versions: ", end="")
+    print("Saving cosmological parameters for versions: ")
     for ver in versions:
         print(f"{ver}", end=", ")
-        version_str = str(ver).zfill(3)
-        VERSIONPATH = Path(EMULATION_PATH / f"AbacusSummit_base_c{version_str}_ph000")
+        VERSIONPATH = Path(D13_EMULATION_PATH / f"AbacusSummit_base_c{str(ver).zfill(3)}_ph000")
         VERSIONPATH.mkdir(parents=True, exist_ok=True)
-        paramfile = Path(VERSIONPATH / filename)
+        paramfile = Path(VERSIONPATH / OUTFILENAME)
         if paramfile.exists():
-            print(f"Error: file {filename} already exists. Skipping.")
+            print(f"Error: file {OUTFILENAME} already exists. Skipping.")
             continue
         
         header      = get_asdf_version_header(version=ver)
@@ -147,11 +157,13 @@ def save_cosmo_parameters_all_versions():
         wb          = header['omega_b']
         wc          = header['omega_cdm']
         Ol          = header['Omega_DE']
-        As          = get_As_from_csv_table(version=ver)
-        lnAs        = np.log(As * 1.0e10)
+        As          = get_sim_params_from_csv_table(version=ver, param_name="A_s")
+        ln1e10As    = np.log(As * 1.0e10)
         ns          = header['n_s']
         w           = header['w']
-        sigma8      = get_sigma8m_from_csv_table(version=ver) 
+        w0          = header["w0"]
+        wa          = header["wa"]
+        sigma8      = get_sim_params_from_csv_table(version=ver, param_name="sigma8_m") 
         Om          = header['Omega_M']
         h           = header['H0'] / 100.0     
         N_eff       = header['N_ncdm'] + header['N_ur']
@@ -162,9 +174,11 @@ def save_cosmo_parameters_all_versions():
             'wb'        : wb,
             'wc'        : wc,
             'Ol'        : Ol,
-            'lnAs'      : lnAs,
+            'ln1e10As'  : ln1e10As,
             'ns'        : ns,
             'w'         : w,
+            'w0'        : w0,
+            'wa'        : wa,
             'sigma8'    : sigma8,
             'Om'        : Om,
             'h'         : h,
@@ -174,5 +188,7 @@ def save_cosmo_parameters_all_versions():
 
     print("Finished")
 
-# save_cosmo_parameters_c000_all_phases()
+save_cosmo_parameters_c000_all_phases()
 save_cosmo_parameters_all_versions()
+
+
