@@ -115,13 +115,14 @@ def make_TPCF_HDF_files_arrays_at_fixed_r(
             fff_cosmo  = fff.create_group(SIMULATION_PATH.name)
             
             # Store cosmological parameters
-            # cosmo_dict = pd.read_csv(Path(SIMULATION_PATH / "cosmological_parameters.dat"), 
-            #                          sep=" "
-            #                          ).iloc[0].to_dict()
+            cosmo_dict = pd.read_csv(Path(SIMULATION_PATH / "cosmological_parameters.dat"), 
+                                     sep=" "
+                                     ).iloc[0].to_dict()
 
             # for key in COSMOLOGY_PARAM_KEYS: 
+            for key in cosmo_dict.keys():
             #     # Store cosmological parameters in hdf5 file
-            #     fff_cosmo.attrs[key] = cosmo_dict[key]
+                fff_cosmo.attrs[key] = cosmo_dict[key]
 
             # Load HOD data to access HOD parameters 
             fff_HOD = h5py.File(SIMULATION_PATH / "HOD_catalogues" / HOD_cat_fname, "r")
