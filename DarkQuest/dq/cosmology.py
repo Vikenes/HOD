@@ -117,7 +117,7 @@ class Cosmology(wCDM):
             Tcmb0=2.7255 * u.K,
             Neff=cosmo_dict["N_eff"],
             m_nu=mnu, #[0.0, 0.0, 0.06] * u.eV,
-            lnAs=cosmo_dict["lnAs"],
+            lnAs=cosmo_dict["ln1e10As"],
             n_s=cosmo_dict["ns"],
             name=name+str(int(cosmo_dict["version"])),
         )
