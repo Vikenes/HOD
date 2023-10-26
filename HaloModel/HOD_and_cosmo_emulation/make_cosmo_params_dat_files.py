@@ -97,6 +97,7 @@ def save_cosmo_parameters_c000_all_phases(version=0):
     As          = get_sim_params_from_csv_table(version=version, param_name="A_s")
     ln1e10As    = np.log(As * 1.0e10)
     ns          = header['n_s']
+    alpha_s     = get_sim_params_from_csv_table(version=version, param_name="alpha_s")
     w           = header['w']
     w0          = header["w0"]
     wa          = header["wa"]
@@ -113,6 +114,7 @@ def save_cosmo_parameters_c000_all_phases(version=0):
         'Ol'        : Ol,
         'ln1e10As'  : ln1e10As,
         'ns'        : ns,
+        'alpha_s'   : alpha_s,
         'w'         : w,
         'w0'        : w0,
         'wa'        : wa,
@@ -142,6 +144,7 @@ def save_cosmo_parameters_all_versions():
     versions = np.arange(0,5)
     versions = np.concatenate((versions, np.arange(100, 127)))
     versions = np.concatenate((versions, np.arange(130,182)))
+
     print("Saving cosmological parameters for versions: ")
     for ver in versions:
         print(f"{ver}", end=", ")
@@ -160,6 +163,7 @@ def save_cosmo_parameters_all_versions():
         As          = get_sim_params_from_csv_table(version=ver, param_name="A_s")
         ln1e10As    = np.log(As * 1.0e10)
         ns          = header['n_s']
+        alpha_s     = get_sim_params_from_csv_table(version=ver, param_name="alpha_s")
         w           = header['w']
         w0          = header["w0"]
         wa          = header["wa"]
@@ -176,6 +180,7 @@ def save_cosmo_parameters_all_versions():
             'Ol'        : Ol,
             'ln1e10As'  : ln1e10As,
             'ns'        : ns,
+            'alpha_s'   : alpha_s,
             'w'         : w,
             'w0'        : w0,
             'wa'        : wa,
