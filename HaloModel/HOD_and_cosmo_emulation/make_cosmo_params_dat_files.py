@@ -42,9 +42,12 @@ def get_asdf_version_header(
     af.close()
     return header 
 
+
 def get_sim_params_from_csv_table(
         version:    int = 130,
-        param_name: Optional[str] = None,):
+        param_name: Optional[str] = None
+        ):
+    
     """
     Some simulation/cosmological parameters are not stored in the header files.
     These are given here: https://abacussummit.readthedocs.io/en/latest/cosmologies.html
@@ -65,12 +68,7 @@ def get_sim_params_from_csv_table(
     idx                 = np.where(csv_sim_names == sim_name)[0][0] # Row index of the version we want
     sim_params          = cosmologies.iloc[idx] # Pandas Series with all parameters for this version
 
-    # Check that the version number in the csv file matches the version argument 
-    version_number_csv = int(csv_sim_names[idx][-3:])
-    if version_number_csv != version:
-        print(f"Error: version {version} does not match version in csv file {version_number_csv}")
-        exit()
-    
+
     if param_name is None:
         print("param_name is None")
         # Return all parameters
@@ -87,12 +85,10 @@ def get_sim_params_from_csv_table(
                 return sim_params.iloc[i]
 
 
-def save_cosmo_parameters_c000_all_phases(version=0):
-    """
-    All phases have the same parameters. 
-    Get the parameters from the first phase.
-    Store copies of the file in the directory of each phase.
-    """
+def get_cosmo_parameters_df(
+        version:   int = 130,
+        ):
+    
     header      = get_asdf_version_header(version=version)
     redshift    = header['Redshift']
     wb          = header['omega_b']
@@ -128,6 +124,18 @@ def save_cosmo_parameters_c000_all_phases(version=0):
         'N_eff'     : N_eff
     }, index=[0])
 
+    return df 
+    
+
+
+def save_cosmo_parameters_c000_all_phases():
+    """
+    All phases have the same parameters. 
+    Get the parameters from the first phase.
+    Store copies of the file in the directory of each phase.
+    """
+    df = get_cosmo_parameters_df(version=0)
+
     # Store df in each phase directory
     print(f"Saving {OUTFILENAME} for all phases of c000.")
     for ph in range(0, 25):
@@ -159,40 +167,7 @@ def save_cosmo_parameters_all_versions():
             print(f"Error: file {OUTFILENAME} already exists. Skipping.")
             continue
         
-        header      = get_asdf_version_header(version=ver)
-        redshift    = header['Redshift']
-        wb          = header['omega_b']
-        wc          = header['omega_cdm']
-        Ol          = header['Omega_DE']
-        As          = get_sim_params_from_csv_table(version=ver, param_name="A_s")
-        ln1e10As    = np.log(As * 1.0e10)
-        ns          = header['n_s']
-        alpha_s     = get_sim_params_from_csv_table(version=ver, param_name="alpha_s")
-        w           = header['w']
-        w0          = header["w0"]
-        wa          = header["wa"]
-        sigma8      = get_sim_params_from_csv_table(version=ver, param_name="sigma8_m") 
-        Om          = header['Omega_M']
-        h           = header['H0'] / 100.0     
-        N_eff       = header['N_ncdm'] + header['N_ur']
-
-        df = pd.DataFrame({
-            'version'   : ver,
-            'redshift'  : redshift,
-            'wb'        : wb,
-            'wc'        : wc,
-            'Ol'        : Ol,
-            'ln1e10As'  : ln1e10As,
-            'ns'        : ns,
-            'alpha_s'   : alpha_s,
-            'w'         : w,
-            'w0'        : w0,
-            'wa'        : wa,
-            'sigma8'    : sigma8,
-            'Om'        : Om,
-            'h'         : h,
-            'N_eff'     : N_eff
-        }, index=[0])
+        df = get_cosmo_parameters_df(version=ver)
         df.to_csv(paramfile, index=False, sep=" ")
 
     print("Finished")
