@@ -11,9 +11,9 @@ Used to define the cosmology needed to create the HOD catalogues.
 
 D13_BASE_PATH       = Path("/mn/stornext/d13/euclid_nobackup/halo/AbacusSummit")
 D13_EMULATION_PATH  = Path(D13_BASE_PATH / "emulation_files")
-OUTFILENAME = filename = Path(f"cosmological_parameters.dat") # Same filename for all simulations
+OUTFILENAME         = Path(f"cosmological_parameters.dat") # Same filename for all simulations
 
-csv_column_names = ['omega_b', 'omega_cdm', 'h', 
+CSV_COLUMN_NAMES = ['omega_b', 'omega_cdm', 'h', 
                     'A_s', 'n_s', 'alpha_s', 
                     'N_ur', 'N_ncdm', 'omega_ncdm', 
                     'w0_fld', 'wa_fld', 'sigma8_m', 
@@ -24,20 +24,20 @@ def get_asdf_version_header(
         phase:   int = 0,
         ):
     """
-    Return the header of the asdf file for a given version and file number
+    Return the header of the asdf file for a given version and file number.
+    Contains some of the cosmological parameters we want to save 
     """
+
+    # Same header for all files of a simulation, load the first one 
     simname     = Path(f"AbacusSummit_base_c{str(version).zfill(3)}_ph{str(phase).zfill(3)}")
-    simulation  = Path(D13_BASE_PATH / simname / "halos/z0.250/halo_info/")
+    asdf_fname  = Path(D13_BASE_PATH / simname / "halos/z0.250/halo_info/halo_info_000.asdf")
 
 
-    if not simulation.exists():        
-        print(f"Error: directory {simulation} does not exist")
-        return
+    if not asdf_fname.exists():        
+        raise FileNotFoundError(f"Error: file {asdf_fname} does not exist")
     
-    # Same header for all files, load the first one 
-    asdf_filename = Path(simulation / "halo_info_000.asdf")
-    
-    af = asdf.open(asdf_filename)
+    # Load the header, and return it 
+    af = asdf.open(asdf_fname)
     header = af['header']
     af.close()
     return header 
@@ -45,22 +45,28 @@ def get_asdf_version_header(
 def get_sim_params_from_csv_table(
         version:    int = 130,
         param_name: Optional[str] = None,):
-    
-    cosmologies_file    = Path(D13_BASE_PATH / "cosmologies.csv")
-    cosmologies         = pd.read_csv(cosmologies_file)
+    """
+    Some simulation/cosmological parameters are not stored in the header files.
+    These are given here: https://abacussummit.readthedocs.io/en/latest/cosmologies.html
+    The .csv file downloaded contains these parameters for all simulation versions.
 
-    ## Get the index of the version
-    ## The csv contains much whitespace, so we extract the version number from the column names
-    colnames            = cosmologies.columns # Column names
-    sim_names_colname   = colnames[0]   # First column is the simulation names
-    sim_names           = cosmologies[sim_names_colname].values # List of simulation names: abacus_cosm_vvv
-    sim_names_versions  = [int(sim_name[11:]) for sim_name in sim_names] # Version number of each simulation
-    idx                 = np.where(np.array(sim_names_versions) == version)[0][0] # Index of the version we want
-    
-    sim_params          = cosmologies.iloc[idx]#[2:] # LCDM parameters
+    param_name: Optional[str].
+    If None, return all parameters as a pandas Series.
+    Otherwise, param_name has to be one of the elements in CSV_COLUMN_NAMES.
+    Then, the parameter value is returned as a float.
+    """
+
+    cosmologies_file    = Path(D13_BASE_PATH / "cosmologies.csv")
+    cosmologies         = pd.read_csv(cosmologies_file, index_col=0)
+
+    # Format the version number to match the csv file     
+    sim_name            = f"abacus_cosm{str(version).zfill(3)}"
+    csv_sim_names       = cosmologies.index.str.strip().values # Strip whitespace from sim-version column names
+    idx                 = np.where(csv_sim_names == sim_name)[0][0] # Row index of the version we want
+    sim_params          = cosmologies.iloc[idx] # Pandas Series with all parameters for this version
 
     # Check that the version number in the csv file matches the version argument 
-    version_number_csv = int(sim_params.iloc[0].strip()[-3:])
+    version_number_csv = int(csv_sim_names[idx][-3:])
     if version_number_csv != version:
         print(f"Error: version {version} does not match version in csv file {version_number_csv}")
         exit()
@@ -71,16 +77,14 @@ def get_sim_params_from_csv_table(
         return sim_params
     
     else:
-        if param_name not in csv_column_names:
+        # Return the value of param_name  
+        if param_name not in CSV_COLUMN_NAMES:
             print(f"Error: parameter {param_name} not found in csv_column_names")
             exit()
         for i in range(2, len(sim_params)):
             key = sim_params.index[i].strip()
             if key == param_name:
                 return sim_params.iloc[i]
-
-    print(f"Error: Something went wrong.")
-    exit()
 
 
 def save_cosmo_parameters_c000_all_phases(version=0):
@@ -193,7 +197,8 @@ def save_cosmo_parameters_all_versions():
 
     print("Finished")
 
-save_cosmo_parameters_c000_all_phases()
-save_cosmo_parameters_all_versions()
+# save_cosmo_parameters_c000_all_phases()
+# save_cosmo_parameters_all_versions()
+
 
 
