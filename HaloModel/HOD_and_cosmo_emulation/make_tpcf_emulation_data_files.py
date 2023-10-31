@@ -32,7 +32,7 @@ D13_OUTPATH         = Path(D13_EMULATION_PATH / "TPCF_emulation")
 
 
 DATASET_NAMES           = ["train", "test", "val"]
-COSMOLOGY_PARAM_KEYS    = ["wb", "wc", "Ol", "lnAs", "ns", "w", "Om", "h", "N_eff"]
+COSMOLOGY_PARAM_KEYS    = ["wb", "wc", "Ol", "ln1e10As", "ns", "alpha_s", "w", "w0", "wa", "Om", "h", "N_eff"]
 HOD_PARAM_KEYS          = ["sigma_logM", "alpha", "kappa", "log10M1", "log10Mmin"]
 
 # Make list of all simulations containing emulation files 
