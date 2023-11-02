@@ -187,13 +187,6 @@ def xi_over_xi_fiducial_hdf5_to_csv(
     HOD_PARAMS can only contain values found in HOD_PARAM_KEYS.
     """
 
-    # SIMULATION_PATHS_TRAIN = 
-    # print(SIMULATION_PATHS)
-    for i, p in enumerate(SIMULATION_PATHS):
-        print(f"{i}: {p.name}")
-    exit()
-    
-
     ng_suffix   = "_ng_fixed" if ng_fixed else ""
 
     # Load hdf5 file with TPCF data
@@ -235,8 +228,10 @@ def xi_over_xi_fiducial_hdf5_to_csv(
 
         _out_list = []
         for SIMULATION_PATH in SIMULATION_PATHS:
+
             # Load data for each simulation. 
             fff_TPCF_cosmo      = fff_TPCF_flag[SIMULATION_PATH.name]
+            print("Loading data for: ", fff_TPCF_cosmo.name)
 
             # Setup cosmolical parameters dictionary. 
             cosmo_params_dict   = {key: fff_TPCF_cosmo.attrs[key] for key in COSMO_PARAMS_CSV}
@@ -262,8 +257,7 @@ def xi_over_xi_fiducial_hdf5_to_csv(
                     xi_key : xi_out,
                 })
                 _out_list.append(df)
-            
-        # Concatenate all dataframes, store in csv file            
+
         df_all          = pd.concat(_out_list)
         OUTFILE         = Path(CSV_OUTPATH / f"TPCF_{flag}{ng_suffix}.csv")
         df_all.to_csv(
@@ -271,8 +265,9 @@ def xi_over_xi_fiducial_hdf5_to_csv(
             index=False,
         )
         dur = time.time() - t0
-        print(f"Done. Took {dur//60:.0f}min {dur%60:.0f}sec")
+        print(f"Done. Took {dur//60:.0f}min {dur%60:.2f}sec")
         print()
+
     fff_TPCF.close()
     dur_tot = time.time() - t0_total
     print(f"Done with all. Took {dur_tot//60:.0f}min {dur_tot%60:.0f}sec")
@@ -286,4 +281,5 @@ HOD_PARAMS_CSV   = ["sigma_logM", "alpha", "kappa", "log10M1", "log10Mmin"]
 xi_over_xi_fiducial_hdf5_to_csv(
     COSMO_PARAMS_CSV=COSMO_PARAMS_CSV,
     HOD_PARAMS_CSV=HOD_PARAMS_CSV,
+    outdir="xi_over_xi_fiducial",
 )
