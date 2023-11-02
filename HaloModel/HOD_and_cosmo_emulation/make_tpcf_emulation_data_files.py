@@ -183,21 +183,18 @@ def xi_over_xi_fiducial_hdf5_to_csv(
     # Whether to use log10(r) or r
     if log_r:
         outdir += "_log_r"
-        r_key  = "log10r"
+        r_key  = "log10r"   # Name of r-column in csv file
         r_out  = np.log10(r_masked)
     else:
-        r_key  = "r"
+        r_key  = "r"        # Name of r-column in csv file
         r_out  = r_masked
 
-    xi_key     = "xi_over_xi_fiducial"
+    xi_key     = "xi_over_xi_fiducial" # Name of xi-column in csv file
     
     CSV_OUTPATH = Path(D13_OUTPATH / outdir) # Path to store csv files
     CSV_OUTPATH.mkdir(parents=False, exist_ok=False) # Create directory. Raises error if it already exists. Prevents overwriting files.
 
 
-
-    exit()
-    
     t0_total = time.time()
     for flag in DATASET_NAMES:
         ### Create csv file from hdf5 file 
