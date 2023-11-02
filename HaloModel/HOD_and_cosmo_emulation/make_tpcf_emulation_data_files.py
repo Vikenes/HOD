@@ -21,17 +21,39 @@ DATASET_NAMES           = ["train", "test", "val"]
 COSMOLOGY_PARAM_KEYS    = ["wb", "wc", "Ol", "ln1e10As", "ns", "alpha_s", "w", "w0", "wa", "sigma8", "Om", "h", "N_eff"]
 HOD_PARAM_KEYS          = ["sigma_logM", "alpha", "kappa", "log10M1", "log10Mmin"]
 
-# Make list of all simulations containing emulation files 
-get_path         = lambda version, phase: Path(D13_EMULATION_PATH / f"AbacusSummit_base_c{str(version).zfill(3)}_ph{str(phase).zfill(3)}")
-Phase_paths      = [get_path(0, ph) for ph in range(25) if get_path(0, ph).is_dir()]
-SIMULATION_PATHS = Phase_paths + [get_path(v, 0) for v in range(1,182) if get_path(v, 0).is_dir()]
+### Make lists of simulations containing emulation files 
 
-TBD = []
+# Get path to simulation, given version and phase
+get_path                = lambda version, phase: Path(D13_EMULATION_PATH / f"AbacusSummit_base_c{str(version).zfill(3)}_ph{str(phase).zfill(3)}")
+# Get list of paths to simulations, given version interval
+get_version_path_list   = lambda v_low, v_high: [get_path(v, 0) for v in range(v_low, v_high) if get_path(v, 0).is_dir()]
+
+# Paths to different simulation types.
+# Helps dividing simulations into train, test, val. 
+C000_PATHS              = [get_path(0, ph) for ph in range(25) if get_path(0, ph).is_dir()]
+C001_C004_PATHS         = get_version_path_list(1, 5)
+LIN_DER_GRID_PATHS      = get_version_path_list(100, 127)
+BROAD_EMUL_GRID_PATHS   = get_version_path_list(130, 182)
+
+# All simulations
+SIMULATION_PATHS        = C000_PATHS + C001_C004_PATHS + LIN_DER_GRID_PATHS + BROAD_EMUL_GRID_PATHS
+
+# Use random half of LIN_DER_GRID_PATHS for train, other half for val
+np.random.seed(1998)
+N_LIN_DER                 = len(LIN_DER_GRID_PATHS)
+LIN_DER_GRID_SHUFFLED     = np.random.permutation(LIN_DER_GRID_PATHS)
+LIN_DER_GRID_TRAIN_PATHS  = list(np.sort(LIN_DER_GRID_SHUFFLED[:N_LIN_DER // 2]))
+LIN_DER_GRID_VAL_PATHS    = list(np.sort(LIN_DER_GRID_SHUFFLED[N_LIN_DER // 2:]))
+
+# Cosmologies to use for training, testing, validation 
+SIMULATION_FLAG_PATHS     = {
+    "train":    LIN_DER_GRID_TRAIN_PATHS + BROAD_EMUL_GRID_PATHS,
+    "test":     C000_PATHS + C001_C004_PATHS,
+    "val":      LIN_DER_GRID_VAL_PATHS,
+}
 
 
 def make_TPCF_HDF_files_arrays_at_fixed_r(
-    r_low:      float = 0.6, 
-    r_high:     float = 100.0,
     ng_fixed:   bool = True,
     outfname:   str = "TPCF"
     ):
@@ -164,6 +186,12 @@ def xi_over_xi_fiducial_hdf5_to_csv(
     COSMO_PARAMS can only contain values found in COSMOLOGY_PARAM_KEYS.
     HOD_PARAMS can only contain values found in HOD_PARAM_KEYS.
     """
+
+    # SIMULATION_PATHS_TRAIN = 
+    # print(SIMULATION_PATHS)
+    for i, p in enumerate(SIMULATION_PATHS):
+        print(f"{i}: {p.name}")
+    exit()
     
 
     ng_suffix   = "_ng_fixed" if ng_fixed else ""
@@ -255,7 +283,7 @@ def xi_over_xi_fiducial_hdf5_to_csv(
 COSMO_PARAMS_CSV = ["wb", "wc", "sigma8", "ns", "alpha_s", "N_eff", "w0", "wa"]
 HOD_PARAMS_CSV   = ["sigma_logM", "alpha", "kappa", "log10M1", "log10Mmin"]
 
-# xi_over_xi_fiducial_hdf5_to_csv(
-#     COSMO_PARAMS_CSV=COSMO_PARAMS_CSV,
-#     HOD_PARAMS_CSV=HOD_PARAMS_CSV,
-# )
+xi_over_xi_fiducial_hdf5_to_csv(
+    COSMO_PARAMS_CSV=COSMO_PARAMS_CSV,
+    HOD_PARAMS_CSV=HOD_PARAMS_CSV,
+)
