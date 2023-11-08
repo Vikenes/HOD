@@ -239,9 +239,9 @@ def xi_over_xi_fiducial_hdf5(
         # Create output file
         fff_OUT         = h5py.File(OUTFILE_HDF5, "w") 
         
-        # Store common r and xi_fiducial. ???? 
+        # Store common r and xi_fiducial. 
         fff_OUT.create_dataset(r_key, data=r_out)        
-        # fff_OUT.create_dataset("xi_fiducial", data=xi_fiducial)
+        fff_OUT.create_dataset("xi_fiducial", data=xi_fiducial)
 
         for SIMULATION_PATH in SIMULATION_FLAG_PATHS[flag]:
 
