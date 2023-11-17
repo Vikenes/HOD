@@ -2,7 +2,17 @@ import numpy as np
 import matplotlib.pyplot as plt 
 import os 
 from scipy.special import erf 
-
+from pathlib import Path
+import matplotlib
+matplotlib.rcParams['text.usetex'] = True
+matplotlib.rcParams.update({'font.size': 14})
+matplotlib.rcParams['text.latex.preamble'] = r'\usepackage{amsmath}'
+params = {'xtick.top': True, 
+          'ytick.right': True, 
+          'xtick.direction': 'in', 
+          'ytick.direction': 'in',
+          }
+plt.rcParams.update(params)
 
 def N_c(logM, alpha, kappa, sigma_logM, logMmin, logM1):
     erf_term = erf((logM - logMmin)/sigma_logM)
@@ -34,21 +44,18 @@ log10M1     = 14.42
 def plot_varying_sigma_logM():
     fig, ax = plt.subplots(figsize=(10, 8))
     sigma_logM_array = np.linspace(0.1, 1, 10)
-    ax.plot([],[], label=r"$N_c$", color='k')
-    # ax.plot([],[], '--', label=r"$N_s$", color='k')
     for i, sigma_logM in enumerate(sigma_logM_array):
         nc = N_c(logM, alpha, kappa, sigma_logM, log10_Mmin, log10M1)
         ax.plot(logM, nc,       color=colors[i], label=rf"$\sigma_{{\log M}}={sigma_logM:.1f}$")
-        # ax.plot(logM, ns, '--', color=colors[i])
     fig.suptitle(r"Varying $\sigma_{\log M}$")
     ax.set_xlabel(r"$\log M$")
     ax.set_ylabel(r"$\langle N_c \rangle$")
-    fig.legend(loc='upper left')
-    plt.show()
+    ax.legend(loc="best")
+    return fig 
 
 
 def plot_varying_log10_Mmin():
-    fig, axes = plt.subplots(1,2, figsize=(16, 8))
+    fig, axes = plt.subplots(1,2, figsize=(17, 8))
     ax0 = axes[0]
     ax1 = axes[1]
     log10_Mmin_array = np.linspace(12, 14, 11)
@@ -72,10 +79,11 @@ def plot_varying_log10_Mmin():
     ax1.set_ylim(1e-4, 7)
     ax0.set_title(r"$\langle N_c \rangle$")
     ax1.set_title(r"$\langle N_s \rangle$")
-
-    ax0.legend(loc='lower right')
-    ax1.legend(loc='lower right')
-    plt.show()
+    ax10 = ax0.get_xlim()[0]
+    ax0.set_xlim(ax10, 15.5)
+    ax0.legend(loc='lower right', fontsize=12)
+    ax1.legend(loc='upper left')
+    return fig 
 
 def plot_varying_log10M1():
     fig, ax1 = plt.subplots(figsize=(10, 8))
@@ -88,9 +96,9 @@ def plot_varying_log10M1():
     ax1.set_ylabel(r"$\langle N_s \rangle$")
     ax1.set_yscale('log')
     ax1.set_ylim(0.5e-4, 1e3)
-    ax1.set_xlim(13,15.1)
+    ax1.set_xlim(12.5,15.1)
     ax1.legend(loc='upper left')
-    plt.show()
+    return fig 
 
 def plot_varying_kappa():
     fig, ax1 = plt.subplots(figsize=(10, 8))
@@ -103,8 +111,10 @@ def plot_varying_kappa():
     ax1.set_ylabel(r"$\langle N_s \rangle$")
     ax1.set_yscale('log')
     ax1.set_ylim(1e-5, 8)
-    ax1.legend(loc='upper left')
-    plt.show()
+    ax1_lims = ax1.get_xlim()
+    ax1.set_xlim(12,ax1_lims[1])
+    ax1.legend(loc='lower right')
+    return fig 
 
 def plot_varying_alpha():
     fig, ax1 = plt.subplots(figsize=(10, 8))
@@ -119,44 +129,66 @@ def plot_varying_alpha():
     ax1.set_ylim(0.8e-3, 6)
     ax1.set_xlim(13,15.1)
     ax1.legend(loc='lower right')
-    plt.show()
+    return fig 
+SAVE = False 
 
-plot_varying_sigma_logM()
-# plot_varying_log10_Mmin()
-plot_varying_log10M1()
-plot_varying_kappa()
-plot_varying_alpha()
-exit()
-# nc = N_c(logM, alpha, kappa, sigma_logM, logMmin, 14.42)
-# plt.plot(logM, nc, label=r'$N_c$')
+def plot_sigma_logM(save=SAVE):
+    sigma_logM = plot_varying_sigma_logM()
+    if save:
+        title = Path(f"./plots/occ_varying_sigma_logM.png")
+        print(f"Saving to {title}")
+        sigma_logM.savefig(title, dpi=200)
+    else:
+        plt.show()
+    sigma_logM.clf()
+    
+def plot_logMmin(save=SAVE):
+    logMmin = plot_varying_log10_Mmin()
+    if save:
+        title = Path(f"./plots/occ_varying_logMmin.png")
+        print(f"Saving to {title}")
+        logMmin.savefig(title, dpi=200)
+    else:
+        plt.show()
+    logMmin.clf()
 
-# sigma_logM = np.linspace(0.06, 1, 10) 
-# for i in sigma_logM:
-#     ns = N_s(logM, alpha, kappa, i, logMmin, logM1)
-#     plt.plot(logM, ns, label=r'$\sigma_{\log M} = %.2f$' % i)
+def plot_logM1(save=SAVE):
+    logM1 = plot_varying_log10M1()
+    if save:
+        title = Path(f"./plots/occ_varying_logM1.png")
+        print(f"Saving to {title}")
+        logM1.savefig(title, dpi=200)
+    else:
+        plt.show()
+    logM1.clf()
 
-# logM1 = np.linspace(13.0, 15.5, 10)
-# for i in logM1:
-#     ns = N_s(logM, alpha, kappa, sigma_logM, logMmin, i)
-    # plt.plot(logM, ns, label=r'$\log M_1 = %.2f$' % i)
+def plot_kappa(save=SAVE):
+    kappa = plot_varying_kappa()
+    if save:
+        title = Path(f"./plots/occ_varying_kappa.png")
+        print(f"Saving to {title}")
+        kappa.savefig(title, dpi=200)
+    else:
+        plt.show()
+    kappa.clf()
 
-# kappa = np.linspace(0.1, 2, 10)
-# for i in kappa:
-#     ns = N_s(logM, alpha, i, sigma_logM, logMmin, logM1)
-#     plt.plot(logM, ns, label=r'$\kappa = %.2f$' % i)
+def plot_alpha(save=SAVE):
+    alpha = plot_varying_alpha()
+    if save:
+        title = Path(f"./plots/occ_varying_alpha.png")
+        print(f"Saving to {title}")
+        alpha.savefig(title, dpi=200)
+    else:
+        plt.show()
+    alpha.clf()
 
 
-alpha = np.linspace(0.1, 1.5, 10)
-for i in alpha:
-    ns = N_s(logM, i, kappa, sigma_logM, logMmin, logM1)
-    plt.plot(logM, ns, label=r'$\alpha = %.2f$' % i)
 
-
-plt.vlines(np.log10(kappa * 10**logMmin), 1e-3, 1e3, linestyle='--', color='k')
-
-# plt.xlim(np.log10(kappa * 10**logMmin) - 0.1, logM[-1])
-
-plt.xlabel(r'$\log M$')
-plt.yscale('log')
-plt.legend()
-plt.show()
+def plotall(save=False):
+    plot_sigma_logM(save=save)
+    plot_logMmin(save=save)
+    plot_logM1(save=save)
+    plot_kappa(save=save)
+    plot_alpha(save=save)
+plotall(save=True)
+# plotall(save=False)
