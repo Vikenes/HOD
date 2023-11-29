@@ -108,3 +108,57 @@ def get_HOD_params_prior_range():
         [alpha      * 0.9,  alpha       * 1.1],
     ])
     return HOD_param_limits
+
+
+
+"""
+Make latex table using pd.DataFrame.to_latex()
+Formatted as 
+
+    Parameter Description Prior range 
+HOD HOD_param_names[0] "Text" HOD_param_limits[0]
+    HOD_param_names[1] "Text" HOD_param_limits[1]
+    HOD_param_names[2] "Text" HOD_param_limits[2]
+    HOD_param_names[3] "Text" HOD_param_limits[3]
+    HOD_param_names[4] "Text" HOD_param_limits[4]
+
+"""
+
+def make_latex_table(
+        outpath="/uio/hume/student-u74/vetleav/Documents/thesis/ProjectedCorrelationFunctionArticle/tables"):
+    HOD_param_labels = get_HOD_param_names_latex()
+    HOD_param_limits = get_HOD_params_prior_range()
+    
+    table_header = [" ", "Parameter", "Prior range"]
+    table_rows = []
+    for ii, name in enumerate(HOD_param_labels):
+        first_row = "HOD" if ii == 0 else ""
+        prior_range = f"[{HOD_param_limits[ii][0]:.3f}, {HOD_param_limits[ii][1]:.3f}]"
+        table_rows.append([first_row, name, prior_range])
+
+    # Add a \hline after the HOD parameters
+    # Without any \\ at the end of the last row, the \hline will be added after the last row
+
+    cosmo_param_labels = get_cosmo_param_names_latex()
+    cosmo_param_limits = get_cosmo_params_prior_range()
+    for ii, name in enumerate(cosmo_param_labels):
+        first_row = r"\hline Cosmology" if ii == 0 else ""
+        prior_range = f"[{cosmo_param_limits[ii][0]:.3f}, {cosmo_param_limits[ii][1]:.3f}]"
+        table_rows.append([first_row, name, prior_range])
+
+    df = pd.DataFrame(table_rows, columns=table_header)
+    caption = "HOD and cosmological parameters and their prior ranges."
+    label = "tab:HOD_and_cosmo_params"
+
+    outfile = Path(f"{outpath}/param_priors.tex")
+    df.to_latex(
+        index=False, 
+        escape=False,
+        buf=outfile,
+        position="h",
+        column_format="llcr",
+        caption=caption,
+        label=label,)
+
+
+make_latex_table()
