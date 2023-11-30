@@ -23,33 +23,50 @@ HOD_PARAM_KEYS          = ["sigma_logM", "alpha", "kappa", "log10M1", "log10Mmin
 
 ### Make lists of simulations containing emulation files 
 
-# Get path to simulation, given version and phase
-get_path                = lambda version, phase: Path(D13_EMULATION_PATH / f"AbacusSummit_base_c{str(version).zfill(3)}_ph{str(phase).zfill(3)}")
-# Get list of paths to simulations, given version interval
-get_version_path_list   = lambda v_low, v_high: [get_path(v, 0) for v in range(v_low, v_high) if get_path(v, 0).is_dir()]
+# Get path to emulation data from a simulation, given version and phase
+def get_version_path_list(
+        version_low:  int  = 0, 
+        version_high: int  = 181,
+        phase:        bool = False,
+        ):
+    get_sim_path = lambda version, phase: Path(D13_EMULATION_PATH / f"AbacusSummit_base_c{str(version).zfill(3)}_ph{str(phase).zfill(3)}")
+    if phase:
+        version_list = [get_sim_path(0, ph) for ph in range(25) if get_sim_path(0, ph).is_dir()]
+    else:
+        version_list = [get_sim_path(v, 0) for v in range(version_low, version_high) if get_sim_path(v, 0).is_dir()]
+    return version_list 
+        
 
-# Paths to different simulation types.
-# Helps dividing simulations into train, test, val. 
-C000_PATHS              = [get_path(0, ph) for ph in range(25) if get_path(0, ph).is_dir()]
-C001_C004_PATHS         = get_version_path_list(1, 5)
-LIN_DER_GRID_PATHS      = get_version_path_list(100, 127)
-BROAD_EMUL_GRID_PATHS   = get_version_path_list(130, 182)
-
+C000_PATHS              = get_version_path_list(phase=True)
+C001_C004_PATHS         = get_version_path_list(version_low=1, version_high=5, phase=False)
+LIN_DER_GRID_PATHS      = get_version_path_list(version_low=100, version_high=127, phase=False)
+BROAD_EMUL_GRID_PATHS   = get_version_path_list(version_low=130, version_high=182, phase=False)
 # All simulations
 SIMULATION_PATHS        = C000_PATHS + C001_C004_PATHS + LIN_DER_GRID_PATHS + BROAD_EMUL_GRID_PATHS
 
-# Use random half of LIN_DER_GRID_PATHS for train, other half for val
-np.random.seed(1998)
-N_LIN_DER                 = len(LIN_DER_GRID_PATHS)
-LIN_DER_GRID_SHUFFLED     = np.random.permutation(LIN_DER_GRID_PATHS)
-LIN_DER_GRID_TRAIN_PATHS  = list(np.sort(LIN_DER_GRID_SHUFFLED[:N_LIN_DER // 2]))
-LIN_DER_GRID_VAL_PATHS    = list(np.sort(LIN_DER_GRID_SHUFFLED[N_LIN_DER // 2:]))
 
+def train_test_val_paths_split(seed=1998):
+    # Use Broad_EMUL_GRID_PATHS and a random half of LIN_DER_GRID_PATHS for training
+    # Use other half of LIN_DER_GRID_PATHS for validation
+    # Use C000_PATHS and C001_C004_PATHS for testing 
+    np.random.seed(seed)
+    N_LIN_DER                 = len(LIN_DER_GRID_PATHS)
+    LIN_DER_GRID_SHUFFLED     = np.random.permutation(LIN_DER_GRID_PATHS)
+    LIN_DER_GRID_TRAIN_PATHS  = list(np.sort(LIN_DER_GRID_SHUFFLED[:N_LIN_DER // 2]))
+    LIN_DER_GRID_VAL_PATHS    = list(np.sort(LIN_DER_GRID_SHUFFLED[N_LIN_DER // 2:]))
+
+    train_paths = LIN_DER_GRID_TRAIN_PATHS + BROAD_EMUL_GRID_PATHS
+    val_paths   = LIN_DER_GRID_VAL_PATHS
+    test_paths  = C000_PATHS + C001_C004_PATHS
+
+    return train_paths, test_paths, val_paths
+
+train_paths, test_paths, val_paths = train_test_val_paths_split()
 # Cosmologies to use for training, testing, validation 
 SIMULATION_FLAG_PATHS     = {
-    "train":    LIN_DER_GRID_TRAIN_PATHS + BROAD_EMUL_GRID_PATHS,
-    "test":     C000_PATHS + C001_C004_PATHS,
-    "val":      LIN_DER_GRID_VAL_PATHS,
+    "train":    train_paths,
+    "test":     test_paths,
+    "val":      val_paths,
 }
 
 
@@ -87,7 +104,7 @@ def make_TPCF_HDF_files_arrays_at_fixed_r(
         outpath = D13_OUTPATH
     else:
         raise ValueError("Must specify either d5 or d13")
-    OUTFILE         = Path(outpath / f"{outfname}{ng_suffix}.hdf5")
+    OUTFILE         = Path(outpath / f"{outfname}{ng_suffix}.hdf5") # /.../TPCF_ng_fixed.hdf5
    
     if OUTFILE.exists():
         # Add option to overwrite file if it exists 
@@ -224,7 +241,7 @@ def xi_over_xi_fiducial_hdf5(
         print(f"Making hdf5 files for {flag}...")
         t0              = time.time()
     
-        OUTFILE_HDF5    = Path(HDF5_OUTPATH / f"TPCF_{flag}{ng_suffix}.hdf5")
+        OUTFILE_HDF5    = Path(HDF5_OUTPATH / f"TPCF_{flag}{ng_suffix}.hdf5") # /.../TPCF_flag_ng_fixed.hdf5
         if OUTFILE_HDF5.exists():
             print(f"Warning: {OUTFILE_HDF5} already exists.")
             opt = input("Do you want to overwrite it? [y/n] ")
