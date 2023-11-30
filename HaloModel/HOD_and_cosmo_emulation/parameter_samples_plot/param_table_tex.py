@@ -28,52 +28,14 @@ with h5py.File(EMULPATH / f"TPCF_test_ng_fixed.hdf5", "r") as f:
     ff                      = f["AbacusSummit_base_c000_ph000"]["node0"]
     COSMO_PARAM_NAMES       = [k for k in ff.attrs.keys() if k not in HOD_PARAM_NAMES]
 
-def get_cosmo_param_names_latex():
-    """
-    Translate the cosmo param names to latex labels.
-    The function is manually adjusted to fit the ones used in the EMULPATH data.
-    If others are used in the future, this function needs to be updated.  
-
-    Returns a list of latex labels for each parameter with same order as COSMO_PARAM_NAMES.
-    """
-    COSMO_PARAM_NAMES_LABELS = []
-
-    for name in COSMO_PARAM_NAMES:
-        if len(name) == 2 and name[0] == "w":
-            if name == "wc":
-                # CDM density: wc -> \omega_cdm
-                gg = rf"\omega_\mathrm{{cdm}}"
-            elif name == "wb":
-                # Baryon density: wb -> \omega_b
-                gg = rf"\omega_\mathrm{{b}}"
-            else:
-                # EoS parameter
-                gg = f"{name[0]}_{name[1]}"
-
-        elif name=="N_eff":
-            g1, g2 = name.split("_")
-            gg = rf"{g1}_\mathrm{{{g2}}}"
-        elif name=="alpha_s":
-            # Running of the spectral index. Use dn_s/dlnk instead of alpha_s
-            # alpha's are used for HOD parameters, avoid confusion
-            gg = rf"\dd n_s / \dd \ln k"
-
-        
-        elif name[-1] == "8":
-            # sigma8 -> \sigma_8
-            gg = rf"\{name[:-1]}_{name[-1]}"
-
-        COSMO_PARAM_NAMES_LABELS.append(rf"${gg}$")
-    return COSMO_PARAM_NAMES_LABELS
-
 
 def get_cosmo_params_prior_range():
     """
     Retrieve all cosmological parameters from all simulations.
     Finds the minimum and maximum value of each parameter.
 
-    Returns an array of shape (8,2), where the second axis is the [min,max] values of each parameter.
-    The order of the parameters is the same as in COSMO_PARAM_NAMES.
+    Returns a dictionary, with COSMO_PARAM_NAMES as keys
+    where each value is a list of [min, max] of the parameter.
     """
 
     # List to fill with all cosmological parameters 
@@ -102,48 +64,25 @@ def get_cosmo_params_prior_range():
     # Stack all cosmological parameters from all datasets
     cosmo_params_all    = np.vstack(cosmo_params_all).T
 
-    # Prior ranges of each param, shape (8,2)
-    cosmo_param_limits  = np.array(
-        [(np.min(cosmo_params_all[i]), np.max(cosmo_params_all[i])) for i in range(8)]
-    )
+    # Create dictionary with prior range of each parameter    
+    cosmo_param_limits = {
+        param: [np.min(cosmo_params_all[i]), np.max(cosmo_params_all[i])] for i, param in enumerate(COSMO_PARAM_NAMES)
+    }
 
     return cosmo_param_limits
 
-
-def get_HOD_param_names_latex():
-    """
-    Translate the HOD param names to latex labels.
-    The function is manually adjusted to fit the ones used in the EMULPATH data.
-    If others are used in the future, this function needs to be updated.  
-
-    Returns a list of latex labels for each parameter with same order as HOD_PARAM_NAMES.
-    """
-    HOD_PARAM_NAMES_LABELS = []
-    
-    for name in HOD_PARAM_NAMES:
-        if not "log" in name:
-            # either "alpha" or "kappa"
-            gg = rf"\{name}" 
-        elif name == "sigma_logM":
-            gg = rf"\sigma_{{\log M}}"
-        else:
-            # log10Mmin/log10M1 -> \log_{10} M_min/M_1 
-            gg = rf"\log_{{10}}M_\mathrm{{{name[6:]}}}"
-
-        HOD_PARAM_NAMES_LABELS.append(f"${gg}$")
-    return HOD_PARAM_NAMES_LABELS
 
 
 def get_HOD_params_prior_range():
     """
     All HOD parameters used are previously stored in csv files.
-    The prioir ranges of all but log10Mmin are given, as they were used to generate the data. 
+    The prior ranges of all but log10Mmin are given, as they were used to generate the data. 
     log10Mmin is given by fixing the gal.num.dens to a constant value. 
 
     Thus, only need to retrieve the prior range of log10Mmin from the csv files.
 
-    Return an array of shape (5,2), where the second axis is the [min,max] values of each parameter.
-    The order of the parameters is the same as in HOD_PARAM_NAMES.
+    Returns a dictionary with HOD_PARAM_NAMES as keys
+    where each value is a list of [min, max] of the parameter.
     """
     log10M1     = 14.42 # h^-1 Msun
     sigma_logM  = 0.6915 
@@ -159,16 +98,17 @@ def get_HOD_params_prior_range():
 
     # Stack all log10Mmin values from all datasets
     log10Mmin   = np.hstack(log10Mmin_all)
-    
-    HOD_param_limits = np.array([
-        [np.min(log10Mmin), np.max(log10Mmin)],
-        [log10M1    * 0.9,  log10M1     * 1.1],
-        [sigma_logM * 0.9,  sigma_logM  * 1.1],
-        [kappa      * 0.9,  kappa       * 1.1],
-        [alpha      * 0.9,  alpha       * 1.1],
-    ])
-    return HOD_param_limits
 
+    # Create dictionary with prior range of each parameter
+    HOD_param_limits = {
+        "log10Mmin"  : [np.min(log10Mmin), np.max(log10Mmin)],
+        "log10M1"   : [log10M1     * 0.9, log10M1     * 1.1],
+        "sigma_logM" : [sigma_logM  * 0.9, sigma_logM  * 1.1],
+        "kappa"      : [kappa       * 0.9, kappa       * 1.1],
+        "alpha"      : [alpha       * 0.9, alpha       * 1.1],
+    }
+    
+    return HOD_param_limits
 
 
 def make_latex_table(
@@ -185,11 +125,9 @@ def make_latex_table(
     -------------------------------------
      HOD       Latex_name    [min,max]    
                Latex_name    [min,max]    
-               Latex_name    [min,max]    
                ...
     -------------------------------------
     Cosmology  Latex_name    [min,max]
-               Latex_name    [min,max]
                Latex_name    [min,max]
                ...
     -------------------------------------
@@ -199,25 +137,46 @@ def make_latex_table(
     table_header    = [" ", "Parameter", "Prior range"]
     table_rows      = []
 
-    # Load HOD latex labels and prior ranges
-    HOD_param_labels = get_HOD_param_names_latex()
-    HOD_param_limits = get_HOD_params_prior_range()
-    
-    # Fill table_rows with HOD parameters
-    for ii, name in enumerate(HOD_param_labels):
-        first_row   = "HOD" if ii == 0 else "" # Add "HOD" to the first row
-        prior_range = f"[{HOD_param_limits[ii][0]:.3f}, {HOD_param_limits[ii][1]:.3f}]"
-        table_rows.append([first_row, name, prior_range])
+    # Latex labels of HOD and cosmological parameters
+    HOD_param_labels = {
+        "log10Mmin"     : r"$\log M_\mathrm{min}$",
+        "log10M1"       : r"$\log M_1$",
+        "sigma_logM"    : r"$\sigma_{\log M}$",
+        "kappa"         : r"$\kappa$",
+        "alpha"         : r"$\alpha$",
+    }
+    cosmo_param_labels = {
+        "N_eff"     : r"$N_\mathrm{eff}$",
+        "alpha_s"   : r"$\dd n_s / \dd \ln k$",
+        "ns"        : r"$n_s$",
+        "sigma8"    : r"$\sigma_8$",
+        "w0"        : r"$w_0$",
+        "wa"        : r"$w_a$",
+        "wb"        : r"$\omega_b$",
+        "wc"        : r"$\omega_\mathrm{cdm}$",
+    }
 
-    # Load cosmological latex labels and prior ranges
-    cosmo_param_labels = get_cosmo_param_names_latex()
-    cosmo_param_limits = get_cosmo_params_prior_range()
+    # Load prior range dicts of HOD and cosmo params 
+    HOD_prior_range   = get_HOD_params_prior_range()
+    cosmo_prior_range = get_cosmo_params_prior_range()
+
+
+    # Fill table_rows with HOD parameters
+    # for ii, name in enumerate(HOD_param_labels):
+    for name in HOD_PARAM_NAMES:
+        first_col            = "HOD" if name == HOD_PARAM_NAMES[0] else "" # Add "HOD" to the first row
+        label                = HOD_param_labels[name]
+        min_prior, max_prior = HOD_prior_range[name]
+        prior_range          = f"[{min_prior:.3f}, {max_prior:.3f}]"
+        table_rows.append([first_col, label, prior_range])
 
     # Fill table_rows with cosmological parameters
-    for ii, name in enumerate(cosmo_param_labels):
-        first_row   = r"\hline Cosmology" if ii == 0 else "" # Add \hline before "Cosmology" to first row
-        prior_range = f"[{cosmo_param_limits[ii][0]:.3f}, {cosmo_param_limits[ii][1]:.3f}]"
-        table_rows.append([first_row, name, prior_range])
+    for name in COSMO_PARAM_NAMES:
+        first_col            = r"\hline Cosmology" if name == COSMO_PARAM_NAMES[0] else "" # Add \hline before "Cosmology" to first row
+        label                = cosmo_param_labels[name]
+        min_prior, max_prior = cosmo_prior_range[name]
+        prior_range          = f"[{min_prior:.3f}, {max_prior:.3f}]"
+        table_rows.append([first_col, label, prior_range])
 
     # Create dataframe and save to latex table.
     # Define caption and label of the table
@@ -239,7 +198,8 @@ def make_latex_table(
         escape=False,
         buf=outfile,
         position="h",
-        column_format="llcr",
+        column_format="llr",
         caption=caption,
         label=label,)
 
+make_latex_table()
