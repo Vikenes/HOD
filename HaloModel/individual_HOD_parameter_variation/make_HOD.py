@@ -48,7 +48,7 @@ def make_hdf5_files(subfolder, overwrite=False):
 
         node_params_df = pd.read_csv(hod_params_fname)
 
-        cosmology = Cosmology.from_custom(run=0, emulator_data_path=HOD_DATA_PATH)
+        cosmology = Cosmology.from_custom(run=0, emulator_data_path="/mn/stornext/d13/euclid_nobackup/halo/AbacusSummit/emulation_files/AbacusSummit_base_c130_ph000")
 
         redshift = 0.25 
         boxsize  = 2000.0
