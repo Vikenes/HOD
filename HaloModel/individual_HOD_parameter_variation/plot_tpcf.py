@@ -124,8 +124,8 @@ def plot_TPCF_individual_param_varied_grid(subfolder):
     ax0.set_ylim(1e-3, 1e6)
     ax2.set_ylim(1e-3, 1e6)
 
-    plt.show()
-    # plt.savefig(f"{FIGPATH}/TPCF_{subfolder}.png", dpi=300)
+    # plt.show()
+    plt.savefig(f"{FIGPATH}/TPCF_{subfolder}.png", dpi=300)
             
 
 
@@ -223,7 +223,7 @@ def plot_TPCF_individual_param_varied_single(subfolder, vary_param):
     # plt.savefig(f"{FIGPATH}/TPCF_{subfolder}.png", dpi=300)
 
 
-SAVE = False
+SAVE = True
 NG_FIXED = True
 
 if len(sys.argv) == 2:

@@ -29,6 +29,11 @@ def N_s(logM, alpha, kappa, sigma_logM, logMmin, logM1):
     nc = N_c(logM, alpha, kappa, sigma_logM, logMmin, logM1)    
     return nc * lambda_sat(logM, alpha, kappa, sigma_logM, logMmin, logM1) 
 
+def N_g(logM, alpha, kappa, sigma_logM, logMmin, logM1):
+    nc = N_c(logM, alpha, kappa, sigma_logM, logMmin, logM1)    
+    ns = N_s(logM, alpha, kappa, sigma_logM, logMmin, logM1)
+    return nc + ns
+
 N = 100000
 logM  = np.linspace(11, 15, N)
 
@@ -142,9 +147,9 @@ def plot_sigma_logM(save=SAVE):
         title = Path(f"./plots/occ_varying_sigma_logM.png")
         print(f"Saving to {title}")
         sigma_logM.savefig(title, dpi=200)
+        sigma_logM.clf()
     else:
         plt.show()
-    sigma_logM.clf()
     
 def plot_logMmin(save=SAVE):
     logMmin = plot_varying_log10_Mmin()
@@ -152,9 +157,9 @@ def plot_logMmin(save=SAVE):
         title = Path(f"./plots/occ_varying_logMmin.png")
         print(f"Saving to {title}")
         logMmin.savefig(title, dpi=200)
+        logMmin.clf()
     else:
         plt.show()
-    logMmin.clf()
 
 def plot_logM1(save=SAVE):
     logM1 = plot_varying_log10M1()
@@ -162,9 +167,9 @@ def plot_logM1(save=SAVE):
         title = Path(f"./plots/occ_varying_logM1.png")
         print(f"Saving to {title}")
         logM1.savefig(title, dpi=200)
+        logM1.clf()
     else:
         plt.show()
-    logM1.clf()
 
 def plot_kappa(save=SAVE):
     kappa = plot_varying_kappa()
@@ -172,9 +177,9 @@ def plot_kappa(save=SAVE):
         title = Path(f"./plots/occ_varying_kappa.png")
         print(f"Saving to {title}")
         kappa.savefig(title, dpi=200)
+        kappa.clf()
     else:
         plt.show()
-    kappa.clf()
 
 def plot_alpha(save=SAVE):
     alpha = plot_varying_alpha()
@@ -182,9 +187,9 @@ def plot_alpha(save=SAVE):
         title = Path(f"./plots/occ_varying_alpha.png")
         print(f"Saving to {title}")
         alpha.savefig(title, dpi=200)
+        alpha.clf()
     else:
         plt.show()
-    alpha.clf()
 
 
 
@@ -194,5 +199,5 @@ def plotall(save=False):
     plot_logM1(save=save)
     plot_kappa(save=save)
     plot_alpha(save=save)
-plotall(save=True)
-# plotall(save=False)
+# plotall(save=True)
+plotall(save=False)
