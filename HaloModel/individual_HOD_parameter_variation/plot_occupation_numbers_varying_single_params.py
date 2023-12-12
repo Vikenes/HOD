@@ -69,7 +69,8 @@ def plot_varying_sigma_logM():
             color_ = colors[i]
         nc = N_c(logM, alpha, kappa, sigma_logM, log10_Mmin, log10M1)
         ax.plot(logM, nc, ls=ls, alpha=alpha_, color=color_, label=rf"$\sigma_{{\log M}}={sigma_logM:.1f}$")
-    fig.suptitle(r"Varying $\sigma_{\log M}$")
+    
+    ax.set_title(r"Varying $\sigma_{\log M}$")
     ax.set_xlabel(XLABEL)
     ax.set_ylabel(r"$\langle N_c \rangle$")
     ax.legend(loc="best")
@@ -95,7 +96,8 @@ def plot_varying_log10_Mmin_Nc():
 
     ax.set_xlabel(XLABEL)
     ax.set_ylabel(r"$\langle N_c \rangle$")
-    ax.set_title(r"$\langle N_c \rangle$")
+    # ax.set_title(r"$\langle N_c \rangle$")
+    ax.set_title(r"Varying $M_\mathrm{min}$")
     ax.legend(loc='lower right', fontsize=12)
     return fig 
 
@@ -123,7 +125,7 @@ def plot_varying_log10_Mmin_Ns():
     ax.set_yscale('log')
     ax.set_ylabel(r"$\langle N_s \rangle$")
     ax.set_ylim(1e-4, 7)
-    ax.set_title(r"$\langle N_s \rangle$")
+    ax.set_title(r"Varying $M_\mathrm{min}$")
     ax.legend(loc='upper left')
     return fig 
 
@@ -144,7 +146,8 @@ def plot_varying_log10M1():
 
         ns = N_s(logM, alpha, kappa, sigma_logM, log10_Mmin, log10M1)
         ax1.plot(logM, ns, ls=ls, alpha=alpha_, color=color_, label=rf"$\log_{{10}} M_1={log10M1:.1f}$")
-    fig.suptitle(r"Varying $\log_{10} M_1$")
+
+    ax1.set_title(r"Varying $ M_1$")
     ax1.set_xlabel(XLABEL)
     ax1.set_ylabel(r"$\langle N_s \rangle$")
     ax1.set_yscale('log')
@@ -170,7 +173,7 @@ def plot_varying_kappa():
 
         ns = N_s(logM, alpha, kappa, sigma_logM, log10_Mmin, log10M1)
         ax1.plot(logM, ns, ls=ls, alpha=alpha_, color=color_, label=rf"$\kappa={kappa:.1f}$")
-    fig.suptitle(r"Varying $\kappa$")
+    ax1.set_title(r"Varying $\kappa$")
     ax1.set_xlabel(XLABEL)
     ax1.set_ylabel(r"$\langle N_s \rangle$")
     ax1.set_yscale('log')
@@ -197,7 +200,7 @@ def plot_varying_alpha():
 
         ns = N_s(logM, alpha, kappa, sigma_logM, log10_Mmin, log10M1)
         ax1.plot(logM, ns, ls=ls, alpha=alpha_, color=color_, label=rf"$\alpha={alpha:.1f}$")
-    fig.suptitle(r"Varying $\alpha$")
+    ax1.set_title(r"Varying $\alpha$")
     ax1.set_xlabel(XLABEL)
     ax1.set_ylabel(r"$\langle N_s \rangle$")
     ax1.set_yscale('log')
