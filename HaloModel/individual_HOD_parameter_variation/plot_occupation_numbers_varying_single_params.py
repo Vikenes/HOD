@@ -227,6 +227,7 @@ def plot_logMmin_Nc(save=SAVE):
     if save:
         title = Path(f"./plots/occ_varying_logMmin_Nc.png")
         print(f"Saving to {title}")
+        logMmin.tight_layout()
         logMmin.savefig(title, dpi=200)
         logMmin.clf()
     else:
@@ -238,6 +239,7 @@ def plot_logMmin_Ns(save=SAVE):
     if save:
         title = Path(f"./plots/occ_varying_logMmin_Ns.png")
         print(f"Saving to {title}")
+        logMmin.tight_layout()
         logMmin.savefig(title, dpi=200)
         logMmin.clf()
     else:
@@ -250,6 +252,7 @@ def plot_logM1(save=SAVE):
     if save:
         title = Path(f"./plots/occ_varying_logM1.png")
         print(f"Saving to {title}")
+        logM1.tight_layout()
         logM1.savefig(title, dpi=200)
         logM1.clf()
     else:
@@ -262,6 +265,7 @@ def plot_kappa(save=SAVE):
     if save:
         title = Path(f"./plots/occ_varying_kappa.png")
         print(f"Saving to {title}")
+        kappa.tight_layout()
         kappa.savefig(title, dpi=200)
         kappa.clf()
     else:
@@ -274,6 +278,7 @@ def plot_alpha(save=SAVE):
     if save:
         title = Path(f"./plots/occ_varying_alpha.png")
         print(f"Saving to {title}")
+        alpha.tight_layout()
         alpha.savefig(title, dpi=200)
         alpha.clf()
     else:
