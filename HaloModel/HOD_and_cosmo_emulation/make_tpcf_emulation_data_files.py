@@ -204,8 +204,15 @@ def xi_over_xi_fiducial_hdf5(
         ):
     
     """
-    Makes hdf5 file version of xi_over_xi_fiducial_hdf5_to_csv().
-    Simplifies the process of analyzing the emulation results after training. 
+    Makes hdf5 files corresponding to the csv files create in xi_over_xi_fiducial_hdf5_to_csv().
+    These files are used to make the csv files.
+
+    Creating csv files from these hdf5 files is simple, 
+    and it allows for simple adjustments to be made to the csv files, i.e. emulator input, if needed.
+    
+    Also, when analyzing the emulation results, it's much easier to 
+    retrieve the correct xi-data from the hdf5 files than from the csv files. 
+    Thus, simplifying the process of evaluating the emulator performance. 
     """
 
     ng_suffix   = "_ng_fixed" if ng_fixed else ""
