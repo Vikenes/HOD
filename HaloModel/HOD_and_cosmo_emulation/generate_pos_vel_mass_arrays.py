@@ -53,6 +53,7 @@ def getMassiveHaloMask(
         version: int = 130, 
         file:    int = 0,
         phase:   int = 0,
+        log10Mmin = 12.0,
         ):
     
 
@@ -60,7 +61,7 @@ def getMassiveHaloMask(
     Get idx of halos with mass > log10Mmin
     return: mask array of halo indices with mass > log10Mmin
     """
-    log10Mmin = 12.0 #* ParticleMassHMsun
+    # log10Mmin = 12.0 #* ParticleMassHMsun
 
     af_filename     = get_asdf_filename(version, file_idx=file, phase=phase)
     af              = asdf.open(af_filename)
@@ -71,8 +72,9 @@ def getMassiveHaloMask(
     return MassMask
 
 def save_L1_pos_vel_mass_single_version(
-        version: int = 130,
-        phase:   int = 0
+        version:    int     = 130,
+        phase:      int     = 0,
+        log10Mmin:  float   = 12.0,
         ):
     """
     Create arrays of L1 data for all files in each simulation version.
@@ -107,11 +109,14 @@ def save_L1_pos_vel_mass_single_version(
         return
     
     # Start computation
+    
     print(f"Saving L1 qtys for simulation {version_dir}")
     t0 = time.time()
 
+    # Start with first file in version
+    # Abacus splits a simulation into 34 files, each containing a planar slab of width L/34 
     af          = asdf.open(af_filename)
-    mask        = getMassiveHaloMask(version=version, file=0, phase=phase)
+    mask        = getMassiveHaloMask(version=version, file=0, phase=phase, log10Mmin=log10Mmin)
 
     ### CU = code units
     ### L1_pos_Mpc/h  = L1_pos_CU * BoxSizeHMpc + BoxSizeHMpc/2 
@@ -132,10 +137,8 @@ def save_L1_pos_vel_mass_single_version(
         print(" - L1_N   size: ", L1N_size)
         return
 
-
-    # for f in range(1,2):
+    # Loop over remaining files (planar slabs) in version
     for f in range(1,N_files_per_version):
-        # print(f"Obtaining L1 positions for file {f}")
         af_filename     = get_asdf_filename(version=version, file_idx=f, phase=phase)
         af              = asdf.open(af_filename)
         mask            = getMassiveHaloMask(version=version, file=f, phase=phase)
@@ -144,10 +147,12 @@ def save_L1_pos_vel_mass_single_version(
         L1_N            = np.concatenate((L1_N, af['data']['N'][mask] ))
         af.close()
     
+    # 
     L1_pos_hMpc     = L1_pos_CU * BoxSizeHMpc + BoxSizeHMpc/2
     L1_vel_kms      = L1_vel_CU * VelZSpace_to_kms
     L1_mass_hMSun   = L1_N * ParticleMassHMsun
 
+    # Store final arrays of entire version to disk 
     print(f"Compuation finished for {version_dir} in {time.time()-t0:.2f} seconds. Saving to disk")
 
     np.save(pos_fname, L1_pos_hMpc)
