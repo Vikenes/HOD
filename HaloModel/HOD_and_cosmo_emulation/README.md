@@ -16,6 +16,8 @@ Before catalogues can be created, some preparation of the data and prerequisites
 #### 1.1 Storing Arrays of halo positions, velocities and mass
 To reduce computational cost, we only consider halos of mass $M > 10^{12}\,\mathrm{M_\odot}/h$, as smaller halos have a low probability of containing galaxies at late redshift. We therefore want to store arrays containing the positions, velocities and masses of all massive halos in each simulation. These halos are the ones that we'll populate with galaxies later on. 
 
+**Important:** These arrays are also used to constrain the galaxy number density, so omitting low mass halos affects the resulting HOD parameters.   
+
 To create and store the arrays, run the script `generate_pos_vel_mass.py`, which outputs three arrays, `L1_*.npy` in `/.../d13/.../AbacusSummit/emulation_files/AbacusSummit_base_c***_ph***/pos_vel_mass_arrays/`.
 The resulting arrays are then loaded, and used as input to create the halo catalogues, which in turn are populated with galaxies. 
 
