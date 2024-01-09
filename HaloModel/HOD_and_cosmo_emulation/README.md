@@ -22,13 +22,21 @@ To create and store the arrays, run the script `generate_pos_vel_mass.py`, which
 The resulting arrays are then loaded, and used as input to create the halo catalogues, which in turn are populated with galaxies. 
 
 #### 1.2 Creating .dat file with cosmological parameters 
-To make halo catalogues, one needs to define the cosmology. The cosmology is set defined in the `dq` class, by reading parameter values from a `.dat` file, which is required to make halo catalogues. 
+To make halo catalogues, one needs to define the cosmology. The cosmology is set in the `dq` class, by reading parameter values from a `.dat` file, which is required to make halo catalogues. 
 
 To create the `.dat` files, run the script `make_cosmo_params_dat_files.py`. Some parameters are retrieved from the header file of the Abacus data, while the remaining parameters are read from the table `AbacusSummit/cosmologies.csv`, which is downloaded from the AbacusSummit website. The resulting output for a given version is stored in `.../emulation_files/AbacusSummit_base_c***_ph***/cosmological_parameters.dat`, which is where `dq` reads it.
 
 
 ## 2. Generate HOD parameter 
-Describe in detail what `generate_HOD_parameters.py` does
+Generate random samples of the HOD parameters to be used by all cosmologies, to generate galaxy catalogues. One galaxy catalogue will be generated for each set of HOD parameters for every cosmology.  
+ - `generate_HOD_parameters.py`
+ - Create 500, 100, 100 sets of the HOD parameters for train, test, val respectively.
+ - With a fiducial parameter set, G_fid, we consider ranges [0.9 x G, 1.1 x G] using `smt.sampling_methods.LHS` with `criterion=corr`.
+ - We fix the galaxy number density via Mmin using the script `numdens_HOD.py`
+ - For each simulation, we output:
+    - `HOD_parameters_{flag}_ng_fixed.csv` for {flag}=train/test/val 
+    - Stored in `d13/**/emulation_files/AbacusSummit_base_c*_ph*/HOD_parameters/`
+    - The csv-files are later read by `make_HOD.py`
 
 ## 3. Make HOD catalogues 
 Describe in detail what `make_HOD.py` does
@@ -46,3 +54,38 @@ Describe other scripts in thse directory not directly connected to the main pipe
  - `/parameter_samples_plot/`
  
 
+
+# HaloModel and DarkQuest workings 
+Here we describe how the two packages `HaloModel` and `DarkQuest` works in practice to create the galaxy catalogues. 
+
+#### dq - Cosmology
+Uses the class `Cosmology(wCDM)`, where `wCDM` is the `astropy.cosmology.wCDM` class: "*FLRW cosmology with a constant dark energy EoS and curvature.*". Initializes all cosmological parameters, and is used to compute critical density, density parameters, etc. 
+
+### hmd.catalogue.HaloCatalogue
+Parameters (With N halos):
+ - `pos`: shape (N, 3)
+ - `vel`: shape (N, 3)
+ - `mass`: shape (N, )
+ - `boxsize`: float 2GPc/h
+ - `conc_mass_model`: hmd.concentration.diemer15
+ - `cosmology`: dq.Cosmology(wCDM)
+ - `redshift`: z=0.25 
+
+When initialized, it computes:
+ - **halo radius:** 
+    - `halotools.empirical_models.halo_mass_to_halo_radius`:
+        - `mass`: (N, ) 
+        - `cosmology`
+        - `redshift`
+        - `mdef=200m`
+    - mdef=200m means that $\rho_\mathrm{threshold}(z)=200\rho_m(z)$
+    - $\rho_m=\Omega_m(z) \rho_\mathrm{crit}$, where $\Omega_m(z)$ is gotten from cosmology.Om(redshift) 
+    - Uses the relation $M_{\Delta}(z) \equiv \frac{4\pi}{3}R_{\Delta}^{3}\Delta_{\rm ref}(z)\rho_{\rm ref}(z)$ to compute the radius, $R_\Delta (z)$.
+- **velocity dispersion:**
+    - vel_disp=vel_virial
+    - `halotools.empirical_models.halo_mass_to_virial_velocity`:
+        - `mass`: (N, ) 
+        - `cosmology`
+        - `redshift`
+        - `mdef=200m`
+    - Weird factor in the end, I don't understand it.
