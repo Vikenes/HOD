@@ -56,7 +56,25 @@ Describe other scripts in thse directory not directly connected to the main pipe
 
 
 # HaloModel and DarkQuest workings 
-Here we describe how the two packages `HaloModel` and `DarkQuest` works in practice to create the galaxy catalogues. 
+Here we describe how the two packages `HaloModel` and `DarkQuest` works in practice to create the galaxy catalogues. The main pipeline is as follows:
+ - Define cosmology: `dq.Cosmology`
+ - Initialize halo catalogue: `hmd..HaloCatalogue`
+    - Compute halo radius (Uses cosmology)
+    - Compute velocity dispersion (Uses cosmology)
+    - Set up concentration: `hmd.concentraion.diemer15`
+ - Initialize HOD maker: `hmd.populate.HODMaker`
+ - Call():
+    - Get central: `Zheng07Centrals`
+    - Get satellite: `Zheng07Sats`
+    - Add profile (satellites): 
+        - sample positions from profile 
+        - sample vels from profile 
+    - Create galaxy DataFrame
+        - Consists of central+satellites
+        - Apply PBC
+    - Initialize GalaxyCatalogue.from_frame()
+        - Not directly used 
+
 
 #### dq - Cosmology
 Uses the class `Cosmology(wCDM)`, where `wCDM` is the `astropy.cosmology.wCDM` class: "*FLRW cosmology with a constant dark energy EoS and curvature.*". Initializes all cosmological parameters, and is used to compute critical density, density parameters, etc. 
@@ -81,11 +99,13 @@ When initialized, it computes:
     - mdef=200m means that $\rho_\mathrm{threshold}(z)=200\rho_m(z)$
     - $\rho_m=\Omega_m(z) \rho_\mathrm{crit}$, where $\Omega_m(z)$ is gotten from cosmology.Om(redshift) 
     - Uses the relation $M_{\Delta}(z) \equiv \frac{4\pi}{3}R_{\Delta}^{3}\Delta_{\rm ref}(z)\rho_{\rm ref}(z)$ to compute the radius, $R_\Delta (z)$.
-- **velocity dispersion:**
+ - **velocity dispersion:**
     - vel_disp=vel_virial
     - `halotools.empirical_models.halo_mass_to_virial_velocity`:
         - `mass`: (N, ) 
         - `cosmology`
         - `redshift`
         - `mdef=200m`
+    - $V_{\rm vir} \equiv \sqrt{GM_{\rm halo}/R_{\rm halo}}$, get radius from mass. 
     - Weird factor in the end, I don't understand it.
+ - **Concentration:**
