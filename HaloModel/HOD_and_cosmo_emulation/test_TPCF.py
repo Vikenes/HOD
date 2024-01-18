@@ -52,6 +52,34 @@ SIMULATION_PATHS = Phase_paths + [get_path(v, 0) for v in range(1,182) if get_pa
 
 TPCF_fnames     = [f"TPCF_{flag}_ng_fixed.hdf5" for flag in DATASET_NAMES]
 
+def test_hdf5_edit():
+    file = Path("/mn/stornext/d5/data/vetleav/emulation_data/TPCF_HOD_and_cosmo/vary_r/TPCF_ng_fixed.hdf5")
+    fff = h5py.File(file, "r")
+    # fff_data = fff["node0"]
+    ff = fff["train"]["AbacusSummit_base_c000_ph000"]["node129"]
+    print(ff.keys())
+    fff_data = ff["r"]
+    print(fff_data[:])
+
+
+    fff.close()
+
+
+    exit()
+    print("NEW FILE")
+
+    fff_new = h5py.File(file, "a")
+    fff_data_new = fff_new["train"]["AbacusSummit_base_c001_ph000"]["node76"]#["xi"]
+    
+    xi_new = fff_data_new["xi"][4:]
+    # print(dir(fff_data_new))
+    # exit()
+    del fff_data_new["xi"]
+    # fff_data_new["xi"][:] = xi_new
+    fff_data_new.create_dataset("xi", data=xi_new)
+    fff_new.close()
+    exit()
+
 
 def print_r_values(
         fiducial=False,
@@ -65,7 +93,10 @@ def print_r_values(
     else:
 
         min_r = []
+        # print(SIMULATION_PATHS)
+        # exit()
         for SIMULATION_PATH in SIMULATION_PATHS:
+
             TPCF_DATA_PATH  = Path(f"{SIMULATION_PATH}/TPCF_data/old_r_sep_avg")
             
             print(f"Checking version {SIMULATION_PATH.name[-10:]}")
@@ -75,37 +106,36 @@ def print_r_values(
 
                 for node in fff.keys():
                     r = fff[node]["r"]
-                    # Check if there is any nan values in r
-                    # r is a monotonically increasing array, so if there is a nan value,
-                    # we want to select the highest index with a nan value, and only consider 
-                    # the values after that index.
+
                     if np.isnan(r).any():
                         idx = np.where(np.isnan(r))[0][-1]
-                        # print(idx)
-                        # print(f"Found nan values in {TPCF_FILE.name}, node {node}: {r[idx[0][-1]]}")
-                        # print(r[idx[0][-1]])
+                        # if idx < 2:
+                        #     continue 
+                        # print(r[:])
+                        # print()
+                        # r_ = r[idx+1:]
+                        # print(r_)
+                        # print()
+                        # xi_ = fff[node]["xi"][idx+1:]
+                        # print(fff[node]["xi"][:])
+                        # print()
+                        # print(xi_)
+                        # print()
+                        print(f"{TPCF_FILE.name=}")
+                        print(f"{node=}")
+                        print(f"{idx=}")
+                        exit()
+
                         min_r.append(r[idx+1])
-                        # if idx == 0:
-                        #     idx_low = idx
-                        # else:
-                        #     idx_low = idx-1
-                        # r_slice = r[idx_low:idx+2] 
-                        # # print(f"r_ = {r[idx-1]:.4f},{r[idx]:.4f},{r_:.4f}")
-                        # print(f"r_ = {r_slice} ({TPCF_fname[5:10]}-{node})")
-                        # input()
-                        # if len(idx[0]) > 1:
-                            # print(f"Found nan values in {TPCF_FILE.name}, node {node}: {r[idx[0][-1]]}")
-                            # print(idx)
-                            # input()
-                            # print("Found more nans")
-                            # print(r[:])
+             
 
                     # if np.isnan(r).any():
             # input(f"Finished version {SIMULATION_PATH.name[-10:]}, continue?")
         print(min_r)
         print(np.max(min_r))
 
-print_r_values(fiducial=False)
+test_hdf5_edit()
+# print_r_values(fiducial=False)
 # a = np.array([1,2,np.nan,4,5,np.nan,7,8,9,10,11,12,13,14,15,16,17,18,19,20])
 # # Check if any nan values in array
 # if np.isnan(a).any():
