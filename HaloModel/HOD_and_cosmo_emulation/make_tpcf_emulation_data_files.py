@@ -70,38 +70,30 @@ SIMULATION_FLAG_PATHS     = {
 }
 
 
-def make_TPCF_HDF_files_arrays_at_fixed_r(
+def make_TPCF_HDF_files_arrays_at_varying_r(
     ng_fixed:   bool = True,
     outfname:   str = "TPCF",
     d5:         bool = True,
-    d13:        bool = False,
     ):
 
     """
-    Create hdf5 files with TPCF data. 
-    Create three groups for emulator datasets (train,test,val)
-    For dataset, creates one group per simulation, and stores cosmological parameters.
-    For each simulation, creates one group per HOD parameter set (node).
-    Stores HOD parameters and TPCF data for each node.
+    Modifies a copy of existing file. 
+    See make_TPCF_HDF_files_arrays_at_fixed_r 
+    in the script make_tpcf_emulation_data_fixed_r.py
+    for details.
 
-    From the resulting HDF5 file, csv files are created using the functions ***_hdf5_to_csv().
-    The csv files are the data actually used for emulation.
-    Making csv files from the single hdf5 file is very simple.
-    Allows for easier adjustments to the data used for emulation, 
-    e.g. adjusting r-interval, taking logarithms, using xi/xi_fiducial, etc.
+    Make file similar to SIMULATION_PATH/TPCF_data/TPCF_ng_fixed.hdf5,
+    but with r-values returned by corrfunc engine, i.e. they VARY for each dataset 
 
-    Also, train/test/val data for all simulations is stored in the same file.
-    When making csv files later, only the data from simulations in 'SIMULATION_FLAG_PATHS' 
-    are used for train/test/val. 
-    This allows for easy adjustments to the train/test/val simulations split.
+    Make a copy of SIMULATION_PATH/TPCF_data/TPCF_ng_fixed.hdf5, and place it in the directory you want 
+    We're only going to store new r-values, and update the xi-datasets if nans exist (empty bin count in corrfunc).  
+
     """
 
     # Make output filename, check if it already exists
     ng_suffix       = "_ng_fixed" if ng_fixed else ""
     if d5:
-        outpath = D5_BASE_PATH
-    elif d13:
-        outpath = D13_OUTPATH
+        outpath = Path(D5_BASE_PATH / "vary_r")
     else:
         raise ValueError("Must specify either d5 or d13")
     OUTFILE         = Path(outpath / f"{outfname}{ng_suffix}.hdf5") # /.../TPCF_ng_fixed.hdf5
@@ -109,30 +101,16 @@ def make_TPCF_HDF_files_arrays_at_fixed_r(
     if OUTFILE.exists():
         # Add option to overwrite file if it exists 
         print(f"Warning: {OUTFILE} already exists.")
-        opt = input("Do you want to overwrite it? [y/n] ")
+        opt = input("Do you want to edit it? [y/n] ")
         if opt != "y":
             print("Aborting...")
             exit()
         else:
             print("Continuing...")
             print()
-        
+
     # Create output file 
-    fff = h5py.File(OUTFILE, "w")
-
-    # Load fiducial TPCF data
-    TPCF_fiducial_fname = f"TPCF_fiducial{ng_suffix}.hdf5"
-    TPCF_fiducial_file  = Path(SIMULATION_PATHS[0] / "TPCF_data" / TPCF_fiducial_fname)
-    TPCF_fiducial       = h5py.File(TPCF_fiducial_file, "r")
-    
-    # Load fiducial r-bins and xi data
-    r_fiducial          = TPCF_fiducial["node0"]["r"][:]
-    xi_fiducial         = TPCF_fiducial["node0"]["xi"][:]
-
-    # Store r and xi_fiducial in hdf5 file
-    fff.create_dataset("r", data=r_fiducial) # Same r for all nodes, so only need to store it once
-    fff.create_dataset("xi_fiducial", data=xi_fiducial)
-
+    fff = h5py.File(OUTFILE, "r+")
     
     t0_total = time.time()
     # for TPCF_fname, HOD_cat_fname in zip(TPCF_fnames, HOD_cat_fnames):
@@ -142,46 +120,47 @@ def make_TPCF_HDF_files_arrays_at_fixed_r(
         print(f"Storing TPCF's for {flag=}")
         t0 = time.time()
 
-        # Create group for each dataset (train, test, val)
-        fff_flag = fff.create_group(flag)
+        fff_flag = fff[flag]
 
         # Load data from all simulations
         for SIMULATION_PATH in SIMULATION_PATHS:
             # Create group for each simulation
             # Each group contains the same cosmological parameters
-            fff_cosmo  = fff_flag.create_group(SIMULATION_PATH.name)
-            
-            # Store cosmological parameters, except version number and redshift
-            cosmo_dict = pd.read_csv(Path(SIMULATION_PATH / "cosmological_parameters.dat"), 
-                                     sep=" "
-                                     ).iloc[0].to_dict()
-            for key in COSMOLOGY_PARAM_KEYS:
-                fff_cosmo.attrs[key] = cosmo_dict[key]
-
-            
-
-            # Load HOD catalogue to access HOD parameters 
-            # Use full catalogue rather than the csv files. 
-            # Ensures correct correspondence between HOD parameters and TPCF data for each node.  
-            fff_HOD     = h5py.File(SIMULATION_PATH / f"HOD_catalogues/halocat{filename_suffix}", "r")
+            # fff_cosmo  = fff_flag.create_group(SIMULATION_PATH.name)
+            fff_cosmo  = fff_flag[SIMULATION_PATH.name]
 
             # Load computed TPCF data  
-            TPCF_data   = h5py.File(SIMULATION_PATH / f"TPCF_data/TPCF{filename_suffix}", "r")
-            N_nodes     = len(TPCF_data.keys())
+            # TPCF_data   = h5py.File(SIMULATION_PATH / f"TPCF_data/TPCF{filename_suffix}", "r")
+            TPCF_data   = h5py.File(SIMULATION_PATH / f"TPCF_data/old_r_sep_avg/TPCF{filename_suffix}", "r")
+
+            N_nodes     = len(fff_cosmo.keys())
 
             # Loop over all HOD parameter sets (nodes)
             for node_idx in range(N_nodes):
-                fff_cosmo_node = fff_cosmo.create_group(f"node{node_idx}")
 
-                # Store HOD parameters in hdf5 file
-                for HOD_param_key, HOD_param_val in fff_HOD[f"node{node_idx}"].attrs.items():
-                    fff_cosmo_node.attrs[HOD_param_key] = HOD_param_val 
-                
+                # fff_cosmo_node = fff_cosmo.create_group(f"node{node_idx}")
+                fff_cosmo_node = fff_cosmo[f"node{node_idx}"]
+
                 # Load xi data, store it 
                 xi_node = TPCF_data[f"node{node_idx}"]["xi"][:]
-                fff_cosmo_node.create_dataset("xi", data=xi_node)
-            
-            fff_HOD.close()
+                r_node  = TPCF_data[f"node{node_idx}"]["r"][:]
+
+                # Check if r_node contains nan values
+                if np.isnan(r_node).any():
+                    # Remove values from r and xi
+                    # Keeping only values where above the lowest nan-occurence in r 
+                    idx     = np.where(np.isnan(r_node))[0][-1] + 1 # Get lowest index where r is not nan
+
+                    # Slice r and xi arrays 
+                    r_node  = r_node[idx:]
+                    xi_node = xi_node[idx:] 
+
+                    # Remove old xi dataset, create new one
+                    del fff_cosmo_node["xi"]
+                    fff_cosmo_node.create_dataset("xi", data=xi_node)
+
+                # Store r data
+                fff_cosmo_node.create_dataset("r", data=r_node)
 
         dur = time.time() - t0        
         print(f"Done with {flag=}. Took {dur//60:.0f}min {dur%60:.0f}sec")
@@ -193,18 +172,18 @@ def make_TPCF_HDF_files_arrays_at_fixed_r(
                    
 
 
-def xi_over_xi_fiducial_hdf5(
+def xi_hdf5(
         COSMO_PARAMS_CSV:   list,
         HOD_PARAMS_CSV:     list,
         r_min:              float = 0.6,
         r_max:              float = 100.0,
         ng_fixed:           bool  = True,
         log_r:              bool  = False,
-        outdir:             str   = "xi_over_xi_fiducial",
+        outdir:             str   = "log10_xi",
         ):
     
     """
-    Makes hdf5 files corresponding to the csv files create in xi_over_xi_fiducial_hdf5_to_csv().
+    Makes hdf5 files corresponding to the csv files create in xi_hdf5_to_csv().
     These files are used to make the csv files.
 
     Creating csv files from these hdf5 files is simple, 
@@ -215,30 +194,33 @@ def xi_over_xi_fiducial_hdf5(
     Thus, simplifying the process of evaluating the emulator performance. 
     """
 
+    """
+    NOTE: The "r-mask" used is constant, since corrfunc returns r-values within fixed bins.
+    However, the data loaded in "fff_TPCF" has r and xi values with different shapes for each dataset, 
+    since it only contains r-values above which there are no nan values.
+    """
+
+    OUTPATH_PARENT = Path(D5_BASE_PATH / "vary_r") # Path to store csv files
+
     ng_suffix   = "_ng_fixed" if ng_fixed else ""
 
     # Load hdf5 file with TPCF data
-    fff_TPCF    = h5py.File(D5_BASE_PATH / f"TPCF{ng_suffix}.hdf5", 'r')
+    fff_TPCF    = h5py.File(OUTPATH_PARENT / f"TPCF{ng_suffix}.hdf5", 'r')
     
-    # Load fiducial r-bins and xi data. Same r-bins for all simulations. 
-    # Only include values where r_min < r < r_max
-    r_all       = fff_TPCF["r"][:]
-    r_mask      = (r_all > r_min) & (r_all < r_max)
-    r_masked    = r_all[r_mask]
-    xi_fiducial = fff_TPCF["xi_fiducial"][:][r_mask]
     
     # Whether to use log10(r) or r
     if log_r:
         outdir += "_log_r"
         r_key  = "log10r"   # Name of r-column in csv file
-        r_out  = np.log10(r_masked)
+        # r_out  = np.log10(r_masked)
     else:
         r_key  = "r"        # Name of r-column in csv file
-        r_out  = r_masked
+        # r_out  = r_masked
 
-    xi_key     = "xi_over_xi_fiducial" # Name of xi-column in csv file
+    # xi_key     = "xi_over_xi_fiducial" # Name of xi-column in csv file
+    xi_key = "log10xi"
     
-    HDF5_OUTPATH = Path(D5_BASE_PATH / outdir) # Path to store csv files
+    HDF5_OUTPATH = Path(OUTPATH_PARENT / outdir) # Path to store csv files
     HDF5_OUTPATH.mkdir(parents=False, exist_ok=False) # Create directory. Raises error if it already exists. Prevents overwriting files.
 
     t0_total = time.time()
@@ -264,8 +246,8 @@ def xi_over_xi_fiducial_hdf5(
         fff_OUT         = h5py.File(OUTFILE_HDF5, "w") 
         
         # Store common r and xi_fiducial. 
-        fff_OUT.create_dataset(r_key, data=r_out)        
-        fff_OUT.create_dataset("xi_fiducial", data=xi_fiducial)
+        # fff_OUT.create_dataset(r_key, data=r_out)        
+        # fff_OUT.create_dataset("xi_fiducial", data=xi_fiducial)
 
         for SIMULATION_PATH in SIMULATION_FLAG_PATHS[flag]:
 
@@ -291,12 +273,17 @@ def xi_over_xi_fiducial_hdf5(
                     fff_OUT_cosmo_node.attrs[key] = val
 
                 # Load TPCF data, apply mask 
+                r_data  = fff_TPCF_cosmo_node["r"][...]
+                r_mask  = (r_data > r_min) & (r_data < r_max)
+
+
                 xi_data = fff_TPCF_cosmo_node["xi"][...][r_mask]
-                xi_out  = xi_data / xi_fiducial 
+                xi_out  = np.log10(xi_data)
+                r_out   = r_data[r_mask] 
 
                 # Store dataset
                 fff_OUT_cosmo_node.create_dataset(xi_key, data=xi_out)
-                # fff_OUT_cosmo_node.create_dataset(r_key, data=r_out)
+                fff_OUT_cosmo_node.create_dataset(r_key, data=r_out)
 
         fff_OUT.close()
         dur = time.time() - t0
@@ -309,10 +296,10 @@ def xi_over_xi_fiducial_hdf5(
 
 
 
-def xi_over_xi_fiducial_hdf5_to_csv(
+def xi_hdf5_to_csv(
         ng_fixed:           bool  = True,
         log_r:              bool  = False,
-        outdir:             str   = "xi_over_xi_fiducial",
+        outdir:             str   = "log10_xi",
         ):
     
     """
@@ -330,6 +317,8 @@ def xi_over_xi_fiducial_hdf5_to_csv(
     HOD_PARAMS can only contain values found in HOD_PARAM_KEYS.
     """
 
+    OUTPATH_PARENT = Path(D5_BASE_PATH / "vary_r") # Path to store csv files
+
     ng_suffix    = "_ng_fixed" if ng_fixed else ""
 
     # Whether to use log10(r) or r
@@ -339,7 +328,7 @@ def xi_over_xi_fiducial_hdf5_to_csv(
     else:
         r_key  = "r"        # Name of r-column in csv file
 
-    CSV_OUTPATH = Path(D5_BASE_PATH / outdir) # Path to store csv files
+    CSV_OUTPATH = Path(OUTPATH_PARENT / outdir) # Path to store csv files
     CSV_OUTPATH.mkdir(parents=False, exist_ok=True) # Create directory. Raises error if it already exists. Prevents overwriting files.
 
 
@@ -356,7 +345,6 @@ def xi_over_xi_fiducial_hdf5_to_csv(
         t0              = time.time()
         CSV_OUTFILE     = Path(CSV_OUTPATH / f"TPCF_{flag}{ng_suffix}.csv")
         fff_TPCF_flag   = h5py.File(HDF5_INFILE, "r") # Data for train, test, val
-        r_out           = fff_TPCF_flag[r_key][:]
 
         _out_list = []
         for SIMULATION_PATH in SIMULATION_FLAG_PATHS[flag]:
@@ -376,8 +364,10 @@ def xi_over_xi_fiducial_hdf5_to_csv(
                 tot_params_dict = {key: fff_TPCF_cosmo_node.attrs[key] for key in fff_TPCF_cosmo_node.attrs.keys()}
 
                 # Load xi/xi_fiducial data 
+                # print(fff_TPCF_cosmo_node.keys().__iter__().__next__())
                 xi_key = fff_TPCF_cosmo_node.keys().__iter__().__next__()
                 xi_out = fff_TPCF_cosmo_node[xi_key][:]
+                r_out  = fff_TPCF_cosmo_node[r_key][:]
                 # Store data in dataframe, append to list
                 df = pd.DataFrame({
                     **tot_params_dict,
@@ -404,15 +394,16 @@ def xi_over_xi_fiducial_hdf5_to_csv(
 
 
 
-# make_TPCF_HDF_files_arrays_at_fixed_r()
+
+
+# make_TPCF_HDF_files_arrays_at_varying_r()
 
 COSMO_PARAMS_CSV = ["wb", "wc", "sigma8", "ns", "alpha_s", "N_eff", "w0", "wa"]
 HOD_PARAMS_CSV   = ["sigma_logM", "alpha", "kappa", "log10M1", "log10Mmin"]
 
-# xi_over_xi_fiducial_hdf5(
+# xi_hdf5(
 #     COSMO_PARAMS_CSV=COSMO_PARAMS_CSV,
 #     HOD_PARAMS_CSV=HOD_PARAMS_CSV,
-#     outdir="xi_over_xi_fiducial",
 # )
 
-# xi_over_xi_fiducial_hdf5_to_csv()
+# xi_hdf5_to_csv()
