@@ -275,11 +275,19 @@ def xi_hdf5(
                 # Load TPCF data, apply mask 
                 r_data  = fff_TPCF_cosmo_node["r"][...]
                 r_mask  = (r_data > r_min) & (r_data < r_max)
+                r_data  = r_data[r_mask]
 
 
                 xi_data = fff_TPCF_cosmo_node["xi"][...][r_mask]
+                if (xi_data < 0).any():
+                    # Remove TPCF data for negative xi
+                    # Include only data for r below the lowest r-value where xi is negative
+                    idx = np.where(xi_data < 0)[0][0]
+                    xi_data = xi_data[:idx]
+                    r_data  = r_data[:idx]
+
                 xi_out  = np.log10(xi_data)
-                r_out   = r_data[r_mask] 
+                r_out   = r_data 
 
                 # Store dataset
                 fff_OUT_cosmo_node.create_dataset(xi_key, data=xi_out)
