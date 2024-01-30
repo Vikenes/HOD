@@ -178,8 +178,6 @@ def xi_hdf5(
         r_min:              float = 0.6,
         r_max:              float = 100.0,
         ng_fixed:           bool  = True,
-        log_r:              bool  = False,
-        outdir:             str   = "log10_xi",
         ):
     
     """
@@ -200,28 +198,15 @@ def xi_hdf5(
     since it only contains r-values above which there are no nan values.
     """
 
-    OUTPATH_PARENT = Path(D5_BASE_PATH / "vary_r") # Path to store csv files
+    HDF5_OUTPATH = Path(D5_BASE_PATH / "vary_r") # Path to store csv and hdf5 files
 
     ng_suffix   = "_ng_fixed" if ng_fixed else ""
-
     # Load hdf5 file with TPCF data
-    fff_TPCF    = h5py.File(OUTPATH_PARENT / f"TPCF{ng_suffix}.hdf5", 'r')
+    fff_TPCF    = h5py.File(HDF5_OUTPATH / f"TPCF{ng_suffix}.hdf5", 'r')
     
+    r_key  = "r"        # Name of r- and xi-columns in csv file
+    xi_key = "xi"
     
-    # Whether to use log10(r) or r
-    if log_r:
-        outdir += "_log_r"
-        r_key  = "log10r"   # Name of r-column in csv file
-        # r_out  = np.log10(r_masked)
-    else:
-        r_key  = "r"        # Name of r-column in csv file
-        # r_out  = r_masked
-
-    # xi_key     = "xi_over_xi_fiducial" # Name of xi-column in csv file
-    xi_key = "log10xi"
-    
-    HDF5_OUTPATH = Path(OUTPATH_PARENT / outdir) # Path to store csv files
-    HDF5_OUTPATH.mkdir(parents=False, exist_ok=False) # Create directory. Raises error if it already exists. Prevents overwriting files.
 
     t0_total = time.time()
     for flag in DATASET_NAMES:
@@ -236,7 +221,8 @@ def xi_hdf5(
             opt = input("Do you want to overwrite it? [y/n] ")
             if opt != "y":
                 print("Aborting...")
-                exit()
+                print()
+                return 
             else:
                 print("Continuing...")
                 print()
@@ -245,9 +231,6 @@ def xi_hdf5(
         # Create output file
         fff_OUT         = h5py.File(OUTFILE_HDF5, "w") 
         
-        # Store common r and xi_fiducial. 
-        # fff_OUT.create_dataset(r_key, data=r_out)        
-        # fff_OUT.create_dataset("xi_fiducial", data=xi_fiducial)
 
         for SIMULATION_PATH in SIMULATION_FLAG_PATHS[flag]:
 
@@ -272,21 +255,30 @@ def xi_hdf5(
                 for key, val in tot_params_dict.items():
                     fff_OUT_cosmo_node.attrs[key] = val
 
-                # Load TPCF data, apply mask 
+                # Load TPCF data, apply r-masking  
                 r_data  = fff_TPCF_cosmo_node["r"][...]
                 r_mask  = (r_data > r_min) & (r_data < r_max)
                 r_data  = r_data[r_mask]
 
-
+                # Load TPCF data 
                 xi_data = fff_TPCF_cosmo_node["xi"][...][r_mask]
-                if (xi_data < 0).any():
-                    # Remove TPCF data for negative xi
-                    # Include only data for r below the lowest r-value where xi is negative
-                    idx = np.where(xi_data < 0)[0][0]
-                    xi_data = xi_data[:idx]
-                    r_data  = r_data[:idx]
 
-                xi_out  = np.log10(xi_data)
+                # Check for negative values in xi
+                # Should only be one, in train/AbacusSummit_base_c167_ph000 node 151
+                if (xi_data <= 0).any():
+                    """
+                    If there are negative values in xi,
+                    replace them with the value of the neighbour to the left, except if the zeroth value is negative.
+
+                    To prevent errors if scaing emulator data by taking the log of xi 
+                    """
+                    print(f"Replacing negative values in xi for {flag}/{SIMULATION_PATH.name} node {node_idx}...")
+                    # Replace negative TPCF data with neighbour 
+                    neg_idx = np.where(xi_data < 0)[0]
+                    for neg_i in neg_idx:
+                        xi_data[neg_i] = xi_data[neg_i-1] if neg_i > 0 else xi_data[neg_i+1] 
+
+                xi_out  = xi_data
                 r_out   = r_data 
 
                 # Store dataset
@@ -306,8 +298,6 @@ def xi_hdf5(
 
 def xi_hdf5_to_csv(
         ng_fixed:           bool  = True,
-        log_r:              bool  = False,
-        outdir:             str   = "log10_xi",
         ):
     
     """
@@ -325,19 +315,13 @@ def xi_hdf5_to_csv(
     HOD_PARAMS can only contain values found in HOD_PARAM_KEYS.
     """
 
-    OUTPATH_PARENT = Path(D5_BASE_PATH / "vary_r") # Path to store csv files
+    CSV_OUTPATH = Path(D5_BASE_PATH / "vary_r") # Path to store csv files
 
     ng_suffix    = "_ng_fixed" if ng_fixed else ""
 
-    # Whether to use log10(r) or r
-    if log_r:
-        outdir += "_log_r"
-        r_key  = "log10r"   # Name of r-column in csv file
-    else:
-        r_key  = "r"        # Name of r-column in csv file
+    r_key  = "r"        # Name of r-column in csv file
+    xi_key = "xi"       # Name of xi-column in csv file
 
-    CSV_OUTPATH = Path(OUTPATH_PARENT / outdir) # Path to store csv files
-    CSV_OUTPATH.mkdir(parents=False, exist_ok=True) # Create directory. Raises error if it already exists. Prevents overwriting files.
 
 
     t0_total = time.time()
@@ -361,9 +345,6 @@ def xi_hdf5_to_csv(
             fff_TPCF_cosmo      = fff_TPCF_flag[SIMULATION_PATH.name]
             print("Storing data from: ", fff_TPCF_cosmo.name)
 
-            # Setup cosmolical parameters dictionary. 
-            # cosmo_params_dict   = {key: fff_TPCF_cosmo.attrs[key] for key in COSMO_PARAMS_CSV}
-
             for node_idx in range(len(fff_TPCF_cosmo)):
                 # Loop over all HOD parameter sets (nodes) in each simulation.
                 fff_TPCF_cosmo_node = fff_TPCF_cosmo[f"node{node_idx}"]
@@ -372,8 +353,6 @@ def xi_hdf5_to_csv(
                 tot_params_dict = {key: fff_TPCF_cosmo_node.attrs[key] for key in fff_TPCF_cosmo_node.attrs.keys()}
 
                 # Load xi/xi_fiducial data 
-                # print(fff_TPCF_cosmo_node.keys().__iter__().__next__())
-                xi_key = fff_TPCF_cosmo_node.keys().__iter__().__next__()
                 xi_out = fff_TPCF_cosmo_node[xi_key][:]
                 r_out  = fff_TPCF_cosmo_node[r_key][:]
                 # Store data in dataframe, append to list
@@ -402,16 +381,14 @@ def xi_hdf5_to_csv(
 
 
 
-
-
 # make_TPCF_HDF_files_arrays_at_varying_r()
 
 COSMO_PARAMS_CSV = ["wb", "wc", "sigma8", "ns", "alpha_s", "N_eff", "w0", "wa"]
 HOD_PARAMS_CSV   = ["sigma_logM", "alpha", "kappa", "log10M1", "log10Mmin"]
 
-# xi_hdf5(
-#     COSMO_PARAMS_CSV=COSMO_PARAMS_CSV,
-#     HOD_PARAMS_CSV=HOD_PARAMS_CSV,
-# )
+xi_hdf5(
+    COSMO_PARAMS_CSV=COSMO_PARAMS_CSV,
+    HOD_PARAMS_CSV=HOD_PARAMS_CSV,
+)
 
-# xi_hdf5_to_csv()
+xi_hdf5_to_csv()
