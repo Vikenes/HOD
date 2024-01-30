@@ -53,9 +53,76 @@ SIMULATION_PATHS = Phase_paths + [get_path(v, 0) for v in range(1,182) if get_pa
 TPCF_fnames     = [f"TPCF_{flag}_ng_fixed.hdf5" for flag in DATASET_NAMES]
 
 def test_hdf5_edit():
-    file = Path("/mn/stornext/d5/data/vetleav/emulation_data/TPCF_HOD_and_cosmo/vary_r/TPCF_ng_fixed.hdf5")
+    # file = Path("/mn/stornext/d5/data/vetleav/emulation_data/TPCF_HOD_and_cosmo/vary_r/log10_xi/TPCF_train_ng_fixed.hdf5")
+    # file = Path("/mn/stornext/d5/data/vetleav/emulation_data/TPCF_HOD_and_cosmo/xi_over_xi_fiducial/TPCF_train_ng_fixed.hdf5")
+    # file = Path("/mn/stornext/d13/euclid_nobackup/halo/AbacusSummit/emulation_files/AbacusSummit_base_c167_ph000/TPCF_data/old_r_sep_avg/TPCF_train_ng_fixed.hdf5")
+    file = Path("/mn/stornext/d13/euclid_nobackup/halo/AbacusSummit/emulation_files/AbacusSummit_base_c167_ph000/TPCF_data/TPCF_train_ng_fixed.hdf5")
+
+    # fff_tr = h5py.File(file, "r")
     fff = h5py.File(file, "r")
+    fff_tr = fff["node151"]
+    file2 = Path("/mn/stornext/d13/euclid_nobackup/halo/AbacusSummit/emulation_files/AbacusSummit_base_c167_ph000/TPCF_data/old_r_sep_avg/TPCF_train_ng_fixed.hdf5")
+    fff2 = h5py.File(file2, "r")
+    fff_tr2 = fff2["node151"]
+
+    r2 = fff_tr2["r"][:]
+    xi2 = fff_tr2["xi"][:]
+    # Check if there are negative values in xi
+    if (xi2 < 0).any():
+        print("Ja1")
+    r2mask = (r2 > 0.6) & (r2 < 100)
+    r2 = r2[r2mask]
+    xi2 = xi2[r2mask]
+    xi_neg = np.where(xi2 < 0)[0][0]
+    xi2 = xi2[:xi_neg+1]
+    r2 = r2[:xi_neg+1]
+    # if (xi2 < 0).any():
+    #     print("Ja2")
+    # else:
+    #     print("Nei")
+    # exit()
+    print(r2)
+    print(xi2)
+    # print(xi_neg)
+    exit()
+    # print(r2[r2mask])
+    # print(xi2[r2mask])
+    # exit()
+    
     # fff_data = fff["node0"]
+    # fff_tr = fff["train"]
+
+    r = fff_tr["r"][:]
+    # r_mask = (r>0.6) & (r<100)
+    xi = fff_tr["xi"][:]
+    import matplotlib.pyplot as plt 
+    plt.plot(r[(r>0.6) & (r<100)], 
+            xi[(r>0.6) & (r<100)],
+            "o-")
+    plt.yscale("log")
+    plt.show()
+    exit()
+    for key in fff_tr.keys():
+        fff_tr_sim = fff_tr[key]
+        for key2 in fff_tr_sim.keys():
+            fff_tr_sim_node = fff_tr_sim[key2]
+            # print(fff_tr_sim_node.keys())
+            # exit()
+            xi = fff_tr_sim_node["log10xi"][:]
+            # xi = fff_tr_sim_node["xi_over_xi_fiducial"][:]
+
+
+            # print(np.log10(xi))
+            # print(np.log10(xi[:]))
+            if np.isnan(xi).any():
+                print(f"{key=}")
+                print(f"{key2=}")
+                r = fff_tr_sim_node["r"][:]
+                print(f"{r=}")
+                print(f"{xi=}")
+
+    print("All clear")
+    exit()
     ff = fff["train"]["AbacusSummit_base_c000_ph000"]["node129"]
     print(ff.keys())
     fff_data = ff["r"]
