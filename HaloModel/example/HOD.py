@@ -9,24 +9,31 @@ from hmd.profiles import FixedCosmologyNFW
 from hmd.populate import HODMaker
 from pathlib import Path
 
+D13_BASE_PATH           = "/mn/stornext/d13/euclid_nobackup/halo/AbacusSummit"
+simname             = f"AbacusSummit_base_c000_ph000"
+HOD_DATA_PATH       = f"{D13_BASE_PATH}/emulation_files/{simname}"
+HALO_ARRAYS_PATH    = f"{HOD_DATA_PATH}/pos_vel_mass_arrays"
+# HOD_DATA_PATH = "/mn/stornext/d5/data/vetleav/HOD_AbacusData"
 
-HOD_DATA_PATH = "/mn/stornext/d5/data/vetleav/HOD_AbacusData"
-
-halocat_fname = Path(f"{HOD_DATA_PATH}/abacus_halo_cat_z0.25.hdf5")
-file_halocat = h5py.File(
-    halocat_fname, 
-    'r',
-)
-N_simulations = len(file_halocat.keys())
+# halocat_fname = Path(f"{HOD_DATA_PATH}/abacus_halo_cat_z0.25.hdf5")
+# file_halocat = h5py.File(
+#     halocat_fname, 
+#     'r',
+# )
+# N_simulations = len(file_halocat.keys())
 
 boxsize = 2000.0
 redshift = 0.25
 
-run = 32 
-version_index = int(run + 130)
-pos  = file_halocat[f"version{version_index}"]["halo_pos"][...] # shape: (N_halos, 3)
-vel  = file_halocat[f"version{version_index}"]["halo_vel"][...]
-mass = file_halocat[f"version{version_index}"]["halo_mass"][...]
+# run = 32 
+# version_index = int(run + 130)
+
+pos  = np.load(f"{HALO_ARRAYS_PATH}/L1_pos.npy")  # shape: (N_halos, 3)
+vel  = np.load(f"{HALO_ARRAYS_PATH}/L1_vel.npy")  # shape: (N_halos, 3)
+mass = np.load(f"{HALO_ARRAYS_PATH}/L1_mass.npy") # shape: (N_halos,)
+# pos  = file_halocat[f"version{version_index}"]["halo_pos"][...] # shape: (N_halos, 3)
+# vel  = file_halocat[f"version{version_index}"]["halo_vel"][...]
+# mass = file_halocat[f"version{version_index}"]["halo_mass"][...]
 # for run in range(52):
     # print(f"run={run}:", end=" ")
 cosmology = Cosmology.from_custom(run=0, emulator_data_path=HOD_DATA_PATH)
@@ -42,7 +49,19 @@ halocat = HaloCatalogue(
     redshift=redshift,
     # mdef: str = "200m",
 )
-
+halo_df = halocat.to_frame()
+conc = hmd.concentration.diemer15(
+                prim_haloprop=mass,
+                cosmology=cosmology,
+                redshift=redshift,
+                sigma8=cosmology.get_sigma8()
+                if hasattr(cosmology, "get_sigma8")
+                else None,
+            )
+print(halo_df["concentration"])
+print()
+print(conc)
+exit()
 
 maker = HODMaker(
     halo_catalogue=halocat,
