@@ -7,11 +7,9 @@ import matplotlib.pyplot as plt
 
 from pycorr import TwoPointCorrelationFunction
 
-D13_BASE_PATH           = "/mn/stornext/d13/euclid_nobackup/halo/AbacusSummit"
+D13_DATA_PATH           = Path("/mn/stornext/d13/euclid_nobackup/halo/AbacusSummit/emulation_files")
+assert D13_DATA_PATH.exists(), f"Error: {D13_DATA_PATH} not found. Check path."
 
-# HOD_DATA_PATH       = f"{DATA_PATH}/TPCF_emulation"
-# HOD_CATALOGUES_PATH = f"{HOD_DATA_PATH}/HOD_catalogues"
-# OUTPUT_PATH         = f"{HOD_DATA_PATH}/corrfunc_arrays"
 
 class TPCF_ABACUS:
     def __init__(
@@ -23,13 +21,14 @@ class TPCF_ABACUS:
             nthreads:    int   = 128,
             use_sep_avg: bool  = False,
             ):
+        
         self.r_bin_edges    = r_bin_edges
         self.r_bin_centers  = (r_bin_edges[1:] + r_bin_edges[:-1]) / 2.0
         self.ng_fixed       = ng_fixed
         self.boxsize        = boxsize
         self.engine         = engine
         self.nthreads       = nthreads
-        self.use_sep_avg    = use_sep_avg
+        self.process_TPCF   = self.compute_TPCF_from_gal_pos_with_sepavg if use_sep_avg else self.compute_TPCF_from_gal_pos_without_sepavg 
         
 
         dataset_names = ['train', 'test', 'val']
@@ -41,12 +40,30 @@ class TPCF_ABACUS:
         self.halocat_fnames  = [f"halocat_{suffix}.hdf5" for suffix in self.fname_suffix]
         self.TPCF_fnames     = [f"TPCF_{suffix}.hdf5" for suffix in self.fname_suffix]
 
-        # TO BE DECIDED:
-        # Save one TPCF array per node per catalogue
-        # or one large TPCF hdf5 file for each catalogue?
-        
 
-    def compute_TPCF_from_gal_pos(
+    def compute_TPCF_from_gal_pos_with_sepavg(
+            self,
+            galaxy_positions: np.ndarray,
+    ) -> np.ndarray:
+        """
+        Compute TPCF for a set of galaxy positions
+        with shape (3, N) where N is the number of galaxies
+        i.e. galaxy_positions = np.array([x, y, z])
+        Return average separation distance in each bin 
+        """
+        
+        result = TwoPointCorrelationFunction(
+                mode            = 's',
+                edges           = self.r_bin_edges,
+                data_positions1 = galaxy_positions,
+                boxsize         = self.boxsize,
+                engine          = self.engine,
+                nthreads        = self.nthreads,
+                )
+
+        return result(return_sep=True) 
+    
+    def compute_TPCF_from_gal_pos_without_sepavg(
             self,
             galaxy_positions: np.ndarray,
     ) -> np.ndarray:
@@ -55,10 +72,6 @@ class TPCF_ABACUS:
         with shape (3, N) where N is the number of galaxies
         i.e. galaxy_positions = np.array([x, y, z])
         """
-        
-        assert galaxy_positions.shape[0] == 3, "galaxy_positions must be a 3xN array"
-        assert galaxy_positions.ndim == 2, "galaxy_positions must be a 3xN array"
-
 
         
         result = TwoPointCorrelationFunction(
@@ -69,32 +82,20 @@ class TPCF_ABACUS:
                 engine          = self.engine,
                 nthreads        = self.nthreads,
                 )
-        
-        if self.use_sep_avg:
-            r, xi = result(return_sep=True)
-            return np.array([r, xi])
-        
-        else:
-            xi = result(return_sep=False)
-            return np.array([self.r_bin_centers, xi])
+
+        return self.r_bin_centers, result(return_sep=False) 
+    
     
     def save_TPCF_data_from_HOD_catalogue(
             self,
             version:    int  = 0,
             phase:      int  = 0,
     ):
-        SIMNAME             = f"AbacusSummit_base_c{str(version).zfill(3)}_ph{str(phase).zfill(3)}"
-        SIM_DATA_PATH       = f"{D13_BASE_PATH}/emulation_files/{SIMNAME}"
-        HOD_CATALOGUE_PATH  = f"{SIM_DATA_PATH}/HOD_catalogues"
-        OUTPUT_PATH         = f"{SIM_DATA_PATH}/TPCF_data"
+        SIM_DATA_PATH       = Path(D13_DATA_PATH / f"AbacusSummit_base_c{str(version).zfill(3)}_ph{str(phase).zfill(3)}")
+        HOD_CATALOGUE_PATH  = Path(SIM_DATA_PATH / "HOD_catalogues")
+        OUTPUT_PATH         = Path(SIM_DATA_PATH / "TPCF_data")
         
-        if not Path(HOD_CATALOGUE_PATH).exists():
-            print(f"Error: HOD catalogue required to make TPCF files.")
-            print(f" - Directory {HOD_CATALOGUE_PATH} not found, aborting...")
-            raise FileNotFoundError
-        else:
-            # Create output directory if it doesn't exist
-            Path(OUTPUT_PATH).mkdir(parents=False, exist_ok=True)
+        Path(OUTPUT_PATH).mkdir(parents=False, exist_ok=True)
 
         for TPCF_fname, halocat_fname in zip(self.TPCF_fnames, self.halocat_fnames):
 
@@ -107,7 +108,7 @@ class TPCF_ABACUS:
             halo_file   = h5py.File(f"{HOD_CATALOGUE_PATH}/{halocat_fname}", "r")
             N_nodes     = len(halo_file.keys()) # Number of parameter samples used to make catalogue
 
-            print(f"Computing all {N_nodes} {TPCF_fname} for {SIMNAME}...", end=" ")
+            print(f"Computing all {N_nodes} {TPCF_fname} for {SIM_DATA_PATH.name}...", end=" ")
             t0 = time.time()
             fff = h5py.File(OUTFILE, "w")
             # Compute TPCF for each node
@@ -119,7 +120,7 @@ class TPCF_ABACUS:
                 z = np.array(HOD_node_catalogue['z'][:])
                 
                 # Compute TPCF 
-                r, xi = self.compute_TPCF_from_gal_pos(
+                r, xi = self.process_TPCF(
                     galaxy_positions=np.array([x, y, z])
                     )
 
@@ -185,8 +186,10 @@ r_bin_edges = np.concatenate((
 tt = TPCF_ABACUS(
     r_bin_edges=r_bin_edges, 
     ng_fixed=True,
-    nthreads=128
+    nthreads=128,
+    use_sep_avg=True,
     )
+
 
 #tt.save_TPCF_all_versions(
 #    c000_phases=False,
@@ -195,9 +198,9 @@ tt = TPCF_ABACUS(
 #    broad_emulator_grid=False,
 #)
 
-tt.save_TPCF_all_versions(
-    c000_phases=False,
-    c001_c004=False,
-    linear_derivative_grid=False,
-    broad_emulator_grid=True,
-)
+# tt.save_TPCF_all_versions(
+#     c000_phases=False,
+#     c001_c004=False,
+#     linear_derivative_grid=False,
+#     broad_emulator_grid=True,
+# )
