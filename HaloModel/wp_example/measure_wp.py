@@ -26,7 +26,7 @@ for dataflag in ['real', 'redshift']:
             pos = np.load(f'/mn/stornext/d8/data/chengzor/void_abacussummit/data/multi/HOD_LOWZ_gal_pos_cos0_ph{phidx}_z0.25.npy')
         if (dataflag == 'redshift'):
             pos = np.load(f'/mn/stornext/d8/data/chengzor/void_abacussummit/data/multi/HOD_LOWZ_gal_pos_zspace_cos0_ph{phidx}_z0.25.npy')
-        
+
         edges = (r_binedge,)
         results_wp = wp(
             boxsize=box_size, 
