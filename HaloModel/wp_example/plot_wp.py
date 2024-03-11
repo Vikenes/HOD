@@ -41,6 +41,22 @@ ax0.errorbar(
     markersize=2,
     label='sim, real',
 )
+
+r_perp_own, wp_own, wp_own_stddev = np.loadtxt(
+    f'./data/wp_own.dat',
+    unpack=True,
+)
+ax0.errorbar(
+    r_perp_own,
+    r_perp_own * wp_own,
+    yerr=r_perp_own * wp_own_stddev,
+    lw=0,
+    elinewidth=0.8,
+    marker='o',
+    markersize=2,
+    label='sim, own',
+)
+
 r_perp_redshift, wp_redshift, wp_redshift_stddev = np.loadtxt(
     f'./data/wp_redshift.dat',
     unpack=True,
@@ -56,20 +72,24 @@ ax0.errorbar(
     label='sim, redshift',
 )
 
+rp_all = np.loadtxt("./data/rp_all_own.dat")
+wp_all = np.loadtxt("./data/wp_all_own.dat")
+
+plt.plot(rp_all.T, rp_all.T * wp_all.T, "k-", lw=1.0)
 
 r_bincentre, xiR, xiR_stddev = np.loadtxt(
     f'/mn/stornext/d8/data/chengzor/void_abacussummit/data/xi-R-gg_LOWZ_cos0_z0.25.dat',
     unpack=True,
 )
-from pathlib import Path 
-import h5py
-D13_DATA_PATH           = Path("/mn/stornext/d13/euclid_nobackup/halo/AbacusSummit/emulation_files")
-SIM_DATA_PATH       = Path(D13_DATA_PATH / f"AbacusSummit_base_c000_ph000")
-HOD_CATALOGUE_PATH  = Path(SIM_DATA_PATH / "TPCF_data")
-halo_file           = h5py.File(HOD_CATALOGUE_PATH/"old_r_sep_avg/TPCF_train_ng_fixed.hdf5", "r")
-node_idx = 0
-HOD_node_catalogue = halo_file[f"node{node_idx}"]
-r_TPCF = HOD_node_catalogue["r"][:]
+# from pathlib import Path 
+# import h5py
+# D13_DATA_PATH           = Path("/mn/stornext/d13/euclid_nobackup/halo/AbacusSummit/emulation_files")
+# SIM_DATA_PATH       = Path(D13_DATA_PATH / f"AbacusSummit_base_c000_ph000")
+# HOD_CATALOGUE_PATH  = Path(SIM_DATA_PATH / "TPCF_data")
+# halo_file           = h5py.File(HOD_CATALOGUE_PATH/"old_r_sep_avg/TPCF_train_ng_fixed.hdf5", "r")
+# node_idx = 0
+# HOD_node_catalogue = halo_file[f"node{node_idx}"]
+# r_TPCF = HOD_node_catalogue["r"][:]
 
 # r_ = np.geomspace(0.5, 60, 30)
 # ax0.plot(r_TPCF, r_TPCF, "ro", ms=4, alpha=0.5, label="r_TPCF")

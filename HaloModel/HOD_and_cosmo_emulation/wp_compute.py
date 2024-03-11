@@ -79,7 +79,9 @@ class TPCF_ABACUS:
     
     def compute_TPCF_from_gal_pos_with_sepavg(
             self,
-            galaxy_positions: np.ndarray,
+            x: np.ndarray,
+            y: np.ndarray,
+            z: np.ndarray,
     ) -> np.ndarray:
         """
         Compute TPCF for a set of galaxy positions
@@ -88,61 +90,53 @@ class TPCF_ABACUS:
         Return average separation distance in each bin 
         """
         
-        r_perp_bins = np.geomspace(0.5, 60, 40)
-        # for r in self.r_bin_centers:
-        #     print(f"{r:.2f}", end=" ")
-        result = TwoPointCorrelationFunction(
-                mode            = 's',
-                edges           = self.r_bin_edges[4:],
-                data_positions1 = galaxy_positions,
-                boxsize         = self.boxsize,
-                engine          = self.engine,
-                nthreads        = self.nthreads,
-                )
-        ravg, xiR = result(return_sep=True)
-        # print(ravg.shape)
-        # exit()
-        # exit()
+        # result = TwoPointCorrelationFunction(
+        #         mode            = 's',
+        #         edges           = self.r_bin_edges[4:],
+        #         data_positions1 = galaxy_positions,
+        #         boxsize         = self.boxsize,
+        #         engine          = self.engine,
+        #         nthreads        = self.nthreads,
+        #         )
+        # ravg, xiR = result(return_sep=True)
 
         result_wp = wp_theory(
             boxsize=self.boxsize,
             pimax=200.0,
             nthreads=self.nthreads,
-            binfile=(r_perp_bins),
-            X=galaxy_positions[0],
-            Y=galaxy_positions[1],
-            Z=galaxy_positions[2],
+            binfile=(self.r_binedge),
+            X=x,
+            Y=y,
+            Z=z,
             output_rpavg=True,
         ) 
-        # rp_binedges = np.geomspace(0.5, 60, 30)
-        # wp = result_rppi.get_corr(return_sep=True, )
         wp = result_wp['wp']
         r_perp = result_wp['rpavg']
 
 
 
-        xiR_func = ius(
-            ravg,
-            xiR,
-        )
-        rpara_integral = np.linspace(0.0, 80.0, int(1000))
-        dr = rpara_integral[1] - rpara_integral[1]
-        wp_fromxiR = 2.0 * simps(
-            xiR_func(
-                np.sqrt(r_perp.reshape(-1, 1)**2 + rpara_integral.reshape(1, -1)**2)
-            ),
-            rpara_integral,
-            axis=-1,
-        )
+        # xiR_func = ius(
+        #     ravg,
+        #     xiR,
+        # )
+        # rpara_integral = np.linspace(0.0, 80.0, int(1000))
+        # dr = rpara_integral[1] - rpara_integral[1]
+        # wp_fromxiR = 2.0 * simps(
+        #     xiR_func(
+        #         np.sqrt(r_perp.reshape(-1, 1)**2 + rpara_integral.reshape(1, -1)**2)
+        #     ),
+        #     rpara_integral,
+        #     axis=-1,
+        # )
 
-        plt.plot(r_perp, r_perp * wp_fromxiR, label='from R')
-        plt.plot(r_perp, r_perp * wp, label='from wp')
-        plt.xscale('log')
-        plt.legend()
-        plt.show()
+        # plt.plot(r_perp, r_perp * wp_fromxiR, label='from R')
+        # plt.plot(r_perp, r_perp * wp, label='from wp')
+        # plt.xscale('log')
+        # plt.legend()
+        # plt.show()
 
 
-        return result(return_sep=True) 
+        return r_perp, wp
     
     def compute_wp_from_gal_pos(
             self,
@@ -164,19 +158,71 @@ class TPCF_ABACUS:
             phase = 0
             ):
         
+        self.r_binedge = np.geomspace(0.5, 60, 30)
+
+        
         SIM_DATA_PATH       = Path(D13_DATA_PATH / f"AbacusSummit_base_c{str(version).zfill(3)}_ph{str(phase).zfill(3)}")
         HOD_CATALOGUE_PATH  = Path(SIM_DATA_PATH / "HOD_catalogues")
+        HOD_PARAMETERS      = Path(SIM_DATA_PATH / "HOD_parameters")
+
         OUTPUT_PATH         = Path(SIM_DATA_PATH / "TPCF_data")
         halo_file           = h5py.File(f"{HOD_CATALOGUE_PATH}/{self.halocat_fnames[0]}", "r")
-        node_idx            = 0
-        HOD_node_catalogue = halo_file[f"node{node_idx}"]
 
-        x = np.array(HOD_node_catalogue['x'][:])
-        y = np.array(HOD_node_catalogue['y'][:])
-        z = np.array(HOD_node_catalogue['z'][:]) # REAL SPACE z = np.array(HOD_node_catalogue['z'][:])
+        wp_lst = []
+        rp_lst = []
+        for node_idx in range(25):
+            # node_idx            = 0
+            HOD_node_catalogue = halo_file[f"node{node_idx}"]
 
-        r, xi = self.process_TPCF(np.array([x, y, z]))
+            x = np.array(HOD_node_catalogue['x'][:])
+            y = np.array(HOD_node_catalogue['y'][:])
+            z = np.array(HOD_node_catalogue['z'][:]) # REAL SPACE z = np.array(HOD_node_catalogue['z'][:])
+            r_perp, wp = self.process_TPCF(x, y, z)
+            if wp[0] > 1000:
+                # continue
+                params = pd.read_csv(HOD_PARAMETERS / f"HOD_parameters_train_ng_fixed.csv")
+                params_fid = pd.read_csv(HOD_PARAMETERS / f"HOD_parameters_fiducial_ng_fixed.csv")
+                p_nod_dict = params.iloc[node_idx].to_dict()
+                p_fid_dict = params_fid.iloc[0].to_dict()
+                print(f"NODE {node_idx} - wp0={wp[0]:.1f}")
+                for key in p_nod_dict.keys():
+                    print(f"{key:12}: {p_nod_dict[key]:6.3f} | fid: {p_fid_dict[key]:.3f}")
+                # print(f"{p_nod_dict=}")
+                # print(f"{p_fid_dict=}")
+                # exit()
+                print()
+            # else
+            wp_lst.append(wp)
+            rp_lst.append(r_perp)
 
+        exit() 
+
+        wp_all = np.array(wp_lst)
+        rp_all = np.array(rp_lst)
+
+        wp_mean = np.mean(
+            wp_all,
+            axis=0,
+        )
+        wp_stddev = np.std(
+            wp_all,
+            axis=0,
+        )
+        OUTFILE = f'../wp_example/data/wp_own.dat'
+        np.savetxt(
+            OUTFILE,
+            np.array([r_perp, wp_mean, wp_stddev]).T,
+        )
+
+        np.savetxt(
+            f'../wp_example/data/rp_all_own.dat',
+            rp_all,
+        )
+        np.savetxt(
+            f'../wp_example/data/wp_all_own.dat',
+            wp_all,
+        )
+        # r, xi = self.process_TPCF(x, y, z)
 
     
     
