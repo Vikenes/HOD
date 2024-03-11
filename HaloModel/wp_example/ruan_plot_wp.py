@@ -5,13 +5,13 @@ from scipy.interpolate import InterpolatedUnivariateSpline as ius
 from scipy.integrate import simps
 
 import matplotlib
-# matplotlib.use('Agg')
+matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 from matplotlib import gridspec
 matplotlib.rcParams['text.usetex'] = True
 matplotlib.rcParams.update({'font.size': 12})
 matplotlib.rcParams['text.latex.preamble'] = r'\usepackage{amsmath}'
-# matplotlib.rcParams['text.latex.preamble'] = r'\usepackage{physics}'
+matplotlib.rcParams['text.latex.preamble'] = r'\usepackage{physics}'
 params = {'xtick.top': True, 'ytick.right': True, 'xtick.direction': 'in', 'ytick.direction': 'in'}
 plt.rcParams.update(params)
 
@@ -61,37 +61,6 @@ r_bincentre, xiR, xiR_stddev = np.loadtxt(
     f'/mn/stornext/d8/data/chengzor/void_abacussummit/data/xi-R-gg_LOWZ_cos0_z0.25.dat',
     unpack=True,
 )
-from pathlib import Path 
-import h5py
-D13_DATA_PATH           = Path("/mn/stornext/d13/euclid_nobackup/halo/AbacusSummit/emulation_files")
-SIM_DATA_PATH       = Path(D13_DATA_PATH / f"AbacusSummit_base_c000_ph000")
-HOD_CATALOGUE_PATH  = Path(SIM_DATA_PATH / "TPCF_data")
-halo_file           = h5py.File(HOD_CATALOGUE_PATH/"old_r_sep_avg/TPCF_train_ng_fixed.hdf5", "r")
-node_idx = 0
-HOD_node_catalogue = halo_file[f"node{node_idx}"]
-r_TPCF = HOD_node_catalogue["r"][:]
-
-# r_ = np.geomspace(0.5, 60, 30)
-# ax0.plot(r_TPCF, r_TPCF, "ro", ms=4, alpha=0.5, label="r_TPCF")
-# ax0.plot(r_bincentre, r_bincentre, "o", ms=2, alpha=1, label="r_bincentre")
-# ax0.plot(r_, r_, "kx", ms=3, label="r_")
-# plt.legend()
-# ax0.set_yscale("log")
-# ax0.set_xscale("log")
-# plt.show()
-# exit()
-
-# for r in r_perp_real:
-#     print(f"{r:.3f}", end=" ")
-# print()
-# print()
-# for r in r_:
-#     print(f"{r:.3f}", end=" ")
-# print()
-# print()
-# for r in r_bincentre:
-#     print(f"{r:.3f}", end=" ")
-
 xiR_func = ius(
     r_bincentre,
     xiR,
@@ -114,10 +83,9 @@ ax0.plot(
 ax0.legend()
 ax0.set_xlabel(r'$r_{\perp} / (h^{-1}\mathrm{Mpc})$')
 ax0.set_ylabel(r'$r_{\perp} w_{p}(r_{\perp})$')
-plt.show()
-# plt.savefig(
-#     "projected.pdf",
-#     bbox_inches="tight",
-#     pad_inches=0.05,
-# )
+plt.savefig(
+    "projected.pdf",
+    bbox_inches="tight",
+    pad_inches=0.05,
+)
 

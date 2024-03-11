@@ -51,9 +51,6 @@ for dataflag in ['real', 'redshift']:
         wp_all,
         axis=0,
     )
-    print(f"{wp_mean=}")
-    exit()
-    OUTFILE = f'./data/wp_{dataflag}.dat'
     np.savetxt(
         f'./data/wp_{dataflag}.dat',
         np.array([r_perp, wp_mean, wp_stddev]).T,
