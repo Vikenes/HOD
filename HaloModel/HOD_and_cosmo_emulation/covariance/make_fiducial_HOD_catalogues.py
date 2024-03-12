@@ -39,14 +39,10 @@ OUTPATH = Path(f"{D13_EMULATION_PATH}/fiducial_data/HOD_catalogues")
 
 
 def make_fiducial_HOD_catalogue_hdf5_files(
-    ng_fixed:   bool = True,
     redshift:   float = 0.25,
     boxsize:    float = 2000.0,
     ):
 
-    filename_suffix = ""
-    if ng_fixed:
-        filename_suffix += "_ng_fixed"
     outfile = Path(OUTPATH / "halocat_fiducial_ng_fixed.hdf5")
     if outfile.exists():
         print(f"{outfile} exists. Skipping.")
