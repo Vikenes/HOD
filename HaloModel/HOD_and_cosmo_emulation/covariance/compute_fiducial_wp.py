@@ -18,15 +18,18 @@ r_binedge = np.geomspace(0.5, 60, 30)
 def compute_wp_of_s_z_from_HOD_catalogue(
         threads:    int   = 128,
         pi_max:     float = 200.0,
-        ng_fixed:   bool  = True,):
+        ):
 
     outfile = Path(OUTPATH / "wp_from_sz_fiducial_ng_fixed.hdf5")
-    if outfile.exists():
+    if not outfile.exists():
         print(f"{outfile} exists. Skipping.")
         return
     
     HOD_catalogue = h5py.File(HOD_FILE, "r")
     fff = h5py.File(outfile, "w")
+
+    wp_lst = []
+    rp_lst = []
 
 
     for key in HOD_catalogue.keys():
@@ -52,7 +55,28 @@ def compute_wp_of_s_z_from_HOD_catalogue(
         wp_group.create_dataset("r_perp", data=r_perp)
         wp_group.create_dataset("w_p",    data=w_p)
 
+        wp_lst.append(w_p)
+        rp_lst.append(r_perp)
+
         print(f"Done with {key}. Took {time.time() - t0:.2f} s")
+    
+    wp_all = np.array(wp_lst)
+    wp_mean = np.mean(
+        wp_all,
+        axis=0,
+    )
+    wp_stddev = np.std(
+        wp_all,
+        axis=0,
+    )
+    fff.create_dataset("wp_mean",    data=wp_mean)
+    fff.create_dataset("wp_stddev", data=wp_stddev)
+
+    rp_mean = np.mean(
+        np.array(rp_lst),
+        axis=0,
+    )
+    fff.create_dataset("rp_mean", data=rp_mean)
 
     fff.close()
     HOD_catalogue.close()
