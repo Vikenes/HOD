@@ -69,7 +69,7 @@ ax0.legend()
 ax0.set_xlabel(r'$r_{\perp} / (h^{-1}\mathrm{Mpc})$')
 ax0.set_ylabel(r'$r_{\perp} w_{p}(r_{\perp})$')
 plt.savefig(
-    "projected.pdf",
+    "wp_plot_individual_and_mean.pdf",
     bbox_inches="tight",
     pad_inches=0.05,
 )
