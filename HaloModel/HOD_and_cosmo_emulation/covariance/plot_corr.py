@@ -25,7 +25,7 @@ fig.colorbar(im0, fraction=0.046, pad=0.04)
 fig.colorbar(im1, fraction=0.046, pad=0.04, ticks=np.linspace(-1, 1, 5))
 
 plt.savefig(
-    "coef_wp.pdf",
+    "corrcoef_wp.pdf",
     bbox_inches="tight",
     pad_inches=0.05,
 )
