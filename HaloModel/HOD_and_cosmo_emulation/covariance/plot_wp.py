@@ -158,8 +158,6 @@ ax1.set_xlabel(r'$r_{\perp} / (h^{-1}\mathrm{Mpc})$')
 ax1.set_ylabel(r'$r_{\perp} w_{p}(r_{\perp})$')
 ax1.set_title(r'$w_p$ from $\xi(r)$')
 
-plt.show()
-exit()
 plt.savefig(
     "wp_plot_individual_and_mean.pdf",
     bbox_inches="tight",
