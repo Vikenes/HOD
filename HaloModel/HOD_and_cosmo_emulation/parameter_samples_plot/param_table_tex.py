@@ -3,6 +3,7 @@ import pandas as pd
 import time 
 from pathlib import Path
 import h5py 
+import yaml
 
 """
 Creates latex table of HOD and cosmological parameters and their prior ranges.
@@ -102,7 +103,7 @@ def get_HOD_params_prior_range():
     # Create dictionary with prior range of each parameter
     HOD_param_limits = {
         "log10Mmin"  : [np.min(log10Mmin), np.max(log10Mmin)],
-        "log10M1"   : [log10M1     * 0.9, log10M1     * 1.1],
+        "log10M1"    : [log10M1     * 0.9, log10M1     * 1.1],
         "sigma_logM" : [sigma_logM  * 0.9, sigma_logM  * 1.1],
         "kappa"      : [kappa       * 0.9, kappa       * 1.1],
         "alpha"      : [alpha       * 0.9, alpha       * 1.1],
@@ -202,4 +203,25 @@ def make_latex_table(
         caption=caption,
         label=label,)
 
-make_latex_table()
+def make_priors_config_file():
+
+    hod = get_HOD_params_prior_range()
+    cosmo = get_cosmo_params_prior_range()
+
+    # Change dictionary entries to dtype list(float, float)
+    hod = {key: [float(val[0]), float(val[1])] for key, val in hod.items()}
+    cosmo = {key: [float(val[0]), float(val[1])] for key, val in cosmo.items()}
+
+    priors = {
+        "HOD": hod, 
+        "cosmology": cosmo
+        }
+    
+    outpath = Path("/mn/stornext/d5/data/vetleav/HOD_AbacusData/covariance_data_fiducial")
+    outfile = Path(outpath / "priors_config.yaml")
+    with open(outfile, "w") as f:
+        yaml.dump(priors, f, default_flow_style=False)
+    
+# make_latex_table()
+    
+# make_priors_config_file()
