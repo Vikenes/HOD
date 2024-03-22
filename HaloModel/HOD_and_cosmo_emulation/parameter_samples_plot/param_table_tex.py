@@ -212,10 +212,12 @@ def make_priors_config_file():
     hod = {key: [float(val[0]), float(val[1])] for key, val in hod.items()}
     cosmo = {key: [float(val[0]), float(val[1])] for key, val in cosmo.items()}
 
-    priors = {
-        "HOD": hod, 
-        "cosmology": cosmo
-        }
+    # priors = {
+    #     "HOD": hod, 
+    #     "cosmology": cosmo
+    #     }
+    
+    priors = hod | cosmo
     
     outpath = Path("/mn/stornext/d5/data/vetleav/HOD_AbacusData/covariance_data_fiducial")
     outfile = Path(outpath / "priors_config.yaml")
