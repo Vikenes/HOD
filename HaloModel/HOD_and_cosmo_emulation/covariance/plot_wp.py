@@ -28,7 +28,7 @@ ax1.set_xscale("log")
 D13_BASE_PATH       = "/mn/stornext/d13/euclid_nobackup/halo/AbacusSummit"
 D13_EMULATION_PATH  = Path(f"{D13_BASE_PATH}/emulation_files/fiducial_data")
 
-OUTPATH   = Path("/mn/stornext/d5/data/vetleav/HOD_AbacusData/covariance_data_fiducial")
+OUTPATH   = Path("/mn/stornext/d5/data/vetleav/HOD_AbacusData/inference_data")
 wp_fname  = Path(OUTPATH / "wp_from_sz_fiducial_ng_fixed.hdf5")
 xi_fname  = Path(OUTPATH / "tpcf_r_fiducial_ng_fixed.hdf5")
 

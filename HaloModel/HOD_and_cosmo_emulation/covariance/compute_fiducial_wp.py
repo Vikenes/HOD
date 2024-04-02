@@ -8,7 +8,7 @@ from Corrfunc.theory.wp import wp
 from pycorr import TwoPointCorrelationFunction
 
 
-OUTPATH     = Path(f"/mn/stornext/d5/data/vetleav/HOD_AbacusData/covariance_data_fiducial")
+OUTPATH     = Path(f"/mn/stornext/d5/data/vetleav/HOD_AbacusData/inference_data")
 HOD_FILE    = Path(OUTPATH / "halocat_fiducial_ng_fixed.hdf5")
 if not HOD_FILE.exists():
     raise FileNotFoundError(f"{HOD_FILE} does not exist. Run make_fiducial_HOD_catalogue_hdf5_files.py")

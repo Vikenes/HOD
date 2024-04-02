@@ -4,7 +4,7 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 import matplotlib.pyplot as plt
 from matplotlib import gridspec
 
-DATAPATH     = Path(f"/mn/stornext/d5/data/vetleav/HOD_AbacusData/covariance_data_fiducial")
+DATAPATH     = Path(f"/mn/stornext/d5/data/vetleav/HOD_AbacusData/inference_data")
 
 cov     = np.load(f'{DATAPATH}/cov_wp_fiducial.npy')
 corr    = np.load(f'{DATAPATH}/corrcoef_wp_fiducial.npy')
