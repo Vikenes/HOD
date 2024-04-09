@@ -6,17 +6,107 @@ from matplotlib import gridspec
 
 DATAPATH     = Path(f"/mn/stornext/d5/data/vetleav/HOD_AbacusData/inference_data")
 
-cov     = np.load(f'{DATAPATH}/cov_wp_fiducial.npy')
-corr    = np.load(f'{DATAPATH}/corrcoef_wp_fiducial.npy')
+def load_cov_corr(filename):
+    cov     = np.load(f'{DATAPATH}/cov_{filename}.npy')
+    corr    = np.load(f'{DATAPATH}/corrcoef_{filename}.npy')
 
-# cov = np.where(cov < 0, 0, cov)
-cov_inv = np.linalg.inv(cov)
-cov_inv_pos = np.where(cov_inv < 0, np.nan, cov_inv)
-cov_inv_neg = np.where(cov_inv > 0, np.nan, cov_inv)
+    return cov, corr
 
-print(f"{np.nanmin(cov_inv_pos)=:6.2e} | {np.nanmax(cov_inv_pos)=:6.2e}")
-print(f"{np.nanmin(cov_inv_neg)=:6.2e} | {np.nanmax(cov_inv_neg)=:6.2e}")
+def get_cov_inv(cov):
+    return np.linalg.inv(cov)
 
+def print_cov_inv_pos_neg(cov_inv):
+    # Print min and max of positive and negative values of the inverse covariance matrix
+    cov_inv_pos = np.where(cov_inv < 0, np.nan, cov_inv)
+    cov_inv_neg = np.where(cov_inv > 0, np.nan, cov_inv)
+    print(f"{np.nanmin(cov_inv_pos)=:6.2e} | {np.nanmax(cov_inv_pos)=:6.2e}")
+    print(f"{np.nanmin(cov_inv_neg)=:6.2e} | {np.nanmax(cov_inv_neg)=:6.2e}")
+
+    return cov_inv_pos, cov_inv_neg
+
+def plot_cov_cov_inv(cov, show = True):
+    cov_inv = get_cov_inv(cov)
+
+    fig = plt.figure(figsize=(12, 5))
+    gs  = gridspec.GridSpec(1, 2,)
+    ax0 = plt.subplot(gs[0])
+    ax1 = plt.subplot(gs[1])
+
+    ax0.set_title("Covariance matrix")
+    ax1.set_title("Inverse covariance matrix")
+    im0 = ax0.imshow(cov, origin="lower", cmap='bwr')
+    im1 = ax1.imshow(cov_inv, origin="lower", cmap='bwr')
+
+    fig.colorbar(im0, fraction=0.046, pad=0.04)
+    fig.colorbar(im1, fraction=0.046, pad=0.04)
+
+    if show:
+        plt.show()
+    else:
+        return fig
+
+def plot_corr(corr, show=True):
+    fig = plt.figure(figsize=(12, 5))
+    gs  = gridspec.GridSpec(1, 2,)
+    ax0 = plt.subplot(gs[0])
+    ax1 = plt.subplot(gs[1])
+
+    ax0.set_title("unscaled colorbar")
+    ax1.set_title("symmetric colorbar")
+
+    im0 = ax0.imshow(corr, origin="lower", cmap='bwr')
+    im1 = ax1.imshow(corr, origin="lower", cmap='bwr', vmin=-1, vmax=1)
+    fig.colorbar(im0, fraction=0.046, pad=0.04)
+    fig.colorbar(im1, fraction=0.046, pad=0.04, ticks=np.linspace(-1, 1, 5))
+    if show:
+        plt.show()
+    else:
+        return fig
+
+def compare_cov_sz_and_cov_rz(cov1, cov2, show=True):
+    cov_inv1 = get_cov_inv(cov1)
+    cov_inv2 = get_cov_inv(cov2)
+
+    fig = plt.figure(figsize=(10, 10))
+    gs  = gridspec.GridSpec(2, 2,)
+    ax0 = plt.subplot(gs[0])
+    ax1 = plt.subplot(gs[1])
+    ax2 = plt.subplot(gs[2])
+    ax3 = plt.subplot(gs[3])
+
+    ax0.set_title("Covariance redshift space")
+    ax1.set_title("Covariance real space")
+    ax2.set_title("Inverse covariance redshift space")
+    ax3.set_title("Inverse covariance real space")
+
+    im0 = ax0.imshow(cov1, origin="lower", cmap='bwr')
+    im1 = ax1.imshow(cov2, origin="lower", cmap='bwr')
+    im2 = ax2.imshow(cov_inv1, origin="lower", cmap='bwr')
+    im3 = ax3.imshow(cov_inv2, origin="lower", cmap='bwr')
+
+    fig.colorbar(im0, fraction=0.046, pad=0.04)
+    fig.colorbar(im1, fraction=0.046, pad=0.04)
+    fig.colorbar(im2, fraction=0.046, pad=0.04)
+    fig.colorbar(im3, fraction=0.046, pad=0.04)
+
+    fig.tight_layout()
+
+    if show:
+        plt.show()
+    else:
+        return fig
+
+
+cov_sz, corr_sz = load_cov_corr("wp_fiducial_sz")
+print(cov_sz.dtype)
+cond = np.linalg.cond(cov_sz)
+print(f"Condition number: {cond}")
+exit()
+eigenvalues, _ = np.linalg.eig(cov_sz)
+print(eigenvalues)
+cov_rz, corr_rz = load_cov_corr("wp_fiducial_rz")
+# print(cov_sz.shape, corr_sz.shape)
+# compare_cov_sz_and_cov_rz(cov_sz, cov_rz)
 exit()
 fig = plt.figure(figsize=(12, 5))
 gs  = gridspec.GridSpec(1, 2,)
