@@ -21,8 +21,8 @@ wp_file.close()
 cov_data         = np.cov(wp_array)
 corr_data        = np.corrcoef(wp_array)
 
-cov_file    = Path(f'{DATAPATH}/cov_wp_fiducial')
-corr_file   = Path(f'{DATAPATH}/corrcoef_wp_fiducial')
+cov_file    = Path(f'{DATAPATH}/cov_wp_fiducial_MGGLAM')
+corr_file   = Path(f'{DATAPATH}/corrcoef_wp_fiducial_MGGLAM')
 
 if not cov_file.exists():    
     print(f"Saving {cov_file}")
