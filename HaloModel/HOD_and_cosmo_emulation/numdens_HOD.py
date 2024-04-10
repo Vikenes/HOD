@@ -163,7 +163,7 @@ def estimate_log10Mmin_from_gal_num_density_MGGLAM(
     ### Make halo catalogue 
 
     # Define cosmology and simparams 
-    cosmology   = Cosmology.from_custom(run=0, emulator_data_path=f"{D13_BASE_PATH}/AbacusSummit_base_c000_ph000")
+    cosmology   = Cosmology.from_custom(run=0, emulator_data_path=f"{D13_BASE_PATH}/fiducial_data/MGGLAM")
     redshift    = 0.25 
     boxsize     = 1000.0
 
