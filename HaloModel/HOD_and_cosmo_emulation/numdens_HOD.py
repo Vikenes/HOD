@@ -133,22 +133,95 @@ def estimate_log10Mmin_from_gal_num_density(
             )
         log10Mmin_best_fit[i] = log10Mmin_spline(ng_desired)
 
-        # Testing implementation accuracy 
-        # Commented out to save time
-        # Compute ng for best fit log10Mmin, to check if it is close to ng_desired
-
-        # if test:
-        #     ng_best_fit_spline = compute_ng_analytical(
-        #         log10Mmin_best_fit[i], 
-        #         sigma_logM_array[i], 
-        #         log10M1_array[i], 
-        #         kappa_array[i], 
-        #         alpha_array[i], 
-        #         mass_center, 
-        #         dn_dM)[0]
-        #     ng_log10Mmin_best[i] = ng_best_fit_spline, log10Mmin_best_fit[i]
-        #     # print(f" - Best fit [{i:2.0f}]: ng: {ng_best_fit_spline:.4e} | log10Mmin: {log10Mmin_best_fit[i]:.4f} | rel.diff. ng: {np.abs(1.0 - ng_best_fit_spline / ng_desired):.6e}")
-        # if test:
-        #     print(f"WORST CASE: {np.max(ng_log10Mmin_best[:,0]):.4e} for log10Mmin = {ng_log10Mmin_best[np.argmax(ng_log10Mmin_best[:,0]),1]:.2f}, with rel diff {np.abs(1.0 - np.max(ng_log10Mmin_best[:,0]) / ng_desired):.4e}")
     return log10Mmin_best_fit
 
+
+
+def estimate_log10Mmin_from_gal_num_density_MGGLAM(
+        sigma_logM_array: ArrayLike,
+        log10M1_array:    ArrayLike,
+        kappa_array:      ArrayLike,
+        alpha_array:      ArrayLike,
+        ng_desired:       float = 2.174e-4, 
+        filename:         str   = "/mn/stornext/d8/data/chengzor/MGGLAMx100/GR_halocat_z0.25.hdf5"
+        ) -> ArrayLike:
+    
+    """
+    Finds the appropriate value of log10Mmin that yields ng = ng_desired.
+    Computes ng with Eq. (19) in https://doi.org/10.1093/mnras/stad1207
+    """
+
+    # Halo data 
+    version_dir      = f"AbacusSummit_base_c000_ph000"
+    SIMULATION_DIR   = f"{D13_BASE_PATH}/AbacusSummit_base_c000_ph000"
+    # POS_VEL_MASS_ARRAYS_PATH = f"{SIMULATION_DIR}/pos_vel_mass_arrays"
+    # if not Path(POS_VEL_MASS_ARRAYS_PATH).exists():
+        # print(f"Error: {POS_VEL_MASS_ARRAYS_PATH} does not exist")
+        # print(" - Halo pos,vel,mass must be stored in this directory to constrain ng.")
+        # return
+
+    ### Make halo catalogue 
+
+    # Define cosmology and simparams 
+    cosmology   = Cosmology.from_custom(run=0, emulator_data_path=f"{D13_BASE_PATH}/AbacusSummit_base_c000_ph000")
+    redshift    = 0.25 
+    boxsize     = 1000.0
+
+
+    fff = h5py.File(filename, "r")
+    N_boxes = len(fff.keys())
+    logMmin_array = np.zeros(N_boxes)
+    for ii in range(N_boxes):
+        print(f"Box {ii+1}/{N_boxes}")
+        pos  = fff[f"box{ii+1}"]["halo_pos"][:]
+        vel  = fff[f"box{ii+1}"]["halo_vel"][:]
+        mass = fff[f"box{ii+1}"]["halo_mass"][:]
+
+        # Make halo catalogue
+        # Used to compute the HMF which is needed to compute ng (see https://doi.org/10.1093/mnras/stad1207)
+        halocat = HaloCatalogue(
+            pos,
+            vel,
+            mass,
+            boxsize,
+            conc_mass_model=diemer15,
+            cosmology=cosmology,
+            redshift=redshift,
+            )
+        
+        # Compute HMF from halo catalogue 
+        N           = 201
+        mass_edges  = np.logspace(np.log10(np.min(mass)), np.log10(np.max(mass)), N)
+        dn_dM       = halocat.compute_hmf(mass_edges)
+        mass_center = 0.5 * (mass_edges[1:] + mass_edges[:-1])
+
+        # Estimate ng from halo catalogue
+        # The log10Mmin range chosen has been tested. 
+        # it yields ng values around 2.174e-4 for all parameter sets.
+        N_Mmin        = 300
+        log10Mmin_arr = np.linspace(13.0, 14.5, N_Mmin) 
+
+
+        # Loop through parameter sets and estimate log10Mmin that yields ng = ng_desired
+        ng_arr = compute_ng_analytical(log10Mmin_arr, 
+                                sigma_logM_array, 
+                                log10M1_array, 
+                                kappa_array, 
+                                alpha_array, 
+                                mass_center, 
+                                dn_dM)
+            
+        # Use spline interpolation to find log10Mmin for ng = ng_desired
+        # log10Mmin is a very well-behaved function 
+        ng_sorted_idx    = np.argsort(ng_arr)
+        log10Mmin_spline = UnivariateSpline(
+            ng_arr[ng_sorted_idx], 
+            log10Mmin_arr[ng_sorted_idx], 
+            k=3, 
+            s=0
+            )
+        logMmin_array[ii] = log10Mmin_spline(ng_desired)
+
+    fff.close()
+
+    return logMmin_array
