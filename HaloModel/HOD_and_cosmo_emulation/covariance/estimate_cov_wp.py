@@ -24,20 +24,26 @@ for i in range(N_sims):
     wp_array[:, i]  = wp_group["w_p"][:]
 
 wp_file.close()
-
-cov         = np.cov(wp_array)
-corr        = np.corrcoef(wp_array)
+cov_data         = np.cov(wp_array)
+corr_data        = np.corrcoef(wp_array)
 
 cov_file    = Path(f'{DATAPATH}/cov_wp_fiducial')
 corr_file   = Path(f'{DATAPATH}/corrcoef_wp_fiducial')
 
+if not cov_file.exists():    
+    print(f"Saving {cov_file}")
+    np.save(
+        cov_file,
+        cov_data,
+    )
+else:
+    print(f"{cov_file} already exists.")
 
-np.save(
-    f'{DATAPATH}/cov_wp_fiducial',
-    cov,
-)
-
-np.save(
-    f'{DATAPATH}/corrcoef_wp_fiducial',
-    corr,
-)
+if not corr_file.exists():
+    print(f"Saving {corr_file}")
+    np.save(
+        corr_file,
+        corr_data,
+    )
+else:
+    print(f"{corr_file} already exists.")
