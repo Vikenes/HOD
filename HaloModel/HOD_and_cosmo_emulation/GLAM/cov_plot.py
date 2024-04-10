@@ -65,6 +65,8 @@ def plot_corr(corr):
     fig.colorbar(im0, fraction=0.046, pad=0.04)
     fig.colorbar(im1, fraction=0.046, pad=0.04, ticks=np.linspace(-1, 1, 5))
 
+    fig.suptitle("Correlation matrix")
+
     figname = Path("figures/corr.png")
     if figname.exists():
         plt.show()
@@ -131,8 +133,8 @@ cov_GLAM, corr_GLAM = load_cov_corr("wp_fiducial_MGGLAM")
 # check_cov(cov_sz)
 # check_cov(cov_GLAM)
 # plot_cov_cov_inv(cov_GLAM)
-# plot_corr(corr_GLAM)
-compare_cov_sz_and_cov_GLAM(cov_GLAM, cov_sz)
+plot_corr(corr_GLAM)
+# compare_cov_sz_and_cov_GLAM(cov_GLAM, cov_sz)
 
 
 exit()
