@@ -128,13 +128,13 @@ def check_cov(cov):
 
 cov_sz, corr_sz = load_cov_corr("wp_fiducial_sz")
 cov_GLAM, corr_GLAM = load_cov_corr("wp_fiducial_MGGLAM")
-
+cov_GLAM /= 8.0
 
 # check_cov(cov_sz)
 # check_cov(cov_GLAM)
 # plot_cov_cov_inv(cov_GLAM)
-plot_corr(corr_GLAM)
-# compare_cov_sz_and_cov_GLAM(cov_GLAM, cov_sz)
+# plot_corr(corr_GLAM)
+# compare_cov_sz_and_cov_GLAM(cov_GLAM / 8.0, cov_sz)
 
 
 exit()
