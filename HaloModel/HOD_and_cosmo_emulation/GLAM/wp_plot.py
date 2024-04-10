@@ -24,13 +24,9 @@ ax1 = plt.subplot(gs[1])
 ax0.set_xscale("log")
 ax1.set_xscale("log")
 
-
-D13_BASE_PATH       = "/mn/stornext/d13/euclid_nobackup/halo/AbacusSummit"
-D13_EMULATION_PATH  = Path(f"{D13_BASE_PATH}/emulation_files/fiducial_data")
-
-OUTPATH   = Path("/mn/stornext/d5/data/vetleav/HOD_AbacusData/inference_data")
-wp_fname  = Path(OUTPATH / "wp_from_sz_fiducial_MGGLAM_ng_fixed.hdf5")
-xi_fname  = Path(OUTPATH / "tpcf_r_fiducial_MGGLAM_ng_fixed.hdf5")
+OUTPATH   = Path("/mn/stornext/d5/data/vetleav/HOD_AbacusData/inference_data/MGGLAM")
+wp_fname  = Path(OUTPATH / "wp_from_sz_fiducial_ng_fixed.hdf5")
+xi_fname  = Path(OUTPATH / "tpcf_r_fiducial_ng_fixed.hdf5")
 
 wp_file = h5py.File(wp_fname, "r")
 xi_file = h5py.File(xi_fname, "r")

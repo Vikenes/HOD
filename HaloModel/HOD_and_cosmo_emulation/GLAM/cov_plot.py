@@ -7,10 +7,10 @@ from matplotlib import gridspec
 
 DATAPATH     = Path(f"/mn/stornext/d5/data/vetleav/HOD_AbacusData/inference_data")
 
-def load_cov_corr(filename):
-    cov     = np.load(f'{DATAPATH}/cov_{filename}.npy')
-    corr    = np.load(f'{DATAPATH}/corrcoef_{filename}.npy')
 
+def load_cov_corr(cov_file, corr_file):
+    cov     = np.load(cov_file)
+    corr    = np.load(corr_file)
     return cov, corr
 
 def get_cov_inv(cov):
@@ -126,48 +126,21 @@ def check_cov(cov):
     print(f"Condition number: {cond}")
     print()
 
-cov_sz, corr_sz = load_cov_corr("wp_fiducial_sz")
-cov_GLAM, corr_GLAM = load_cov_corr("wp_fiducial_MGGLAM")
+# cov_GLAM, corr_GLAM     = np.load(f'{DATAPATH}/MGGLAM/cov_wp_fiducial.npy')
+cov_GLAM, corr_GLAM = load_cov_corr(
+    f'{DATAPATH}/MGGLAM/cov_wp_fiducial.npy', 
+    f'{DATAPATH}/MGGLAM/corrcoef_wp_fiducial.npy'
+    )
+cov_sz, corr_sz = load_cov_corr(
+    f'{DATAPATH}/cov_wp_fiducial.npy', 
+    f'{DATAPATH}/corrcoef_wp_fiducial.npy'
+    )
+
 cov_GLAM /= 8.0
 
 # check_cov(cov_sz)
-# check_cov(cov_GLAM)
+check_cov(cov_GLAM)
 # plot_cov_cov_inv(cov_GLAM)
 # plot_corr(corr_GLAM)
-# compare_cov_sz_and_cov_GLAM(cov_GLAM / 8.0, cov_sz)
+compare_cov_sz_and_cov_GLAM(cov_GLAM / 8.0, cov_sz)
 
-
-exit()
-
-
-
-cond = np.linalg.cond(cov_sz)
-eigenvalues, _ = np.linalg.eig(cov_sz)
-print(f"{eigenvalues=}")
-print(f"Condition number: {cond}")
-exit()
-cov_rz, corr_rz = load_cov_corr("wp_fiducial_rz")
-# print(cov_sz.shape, corr_sz.shape)
-# compare_cov_sz_and_cov_rz(cov_sz, cov_rz)
-exit()
-fig = plt.figure(figsize=(12, 5))
-gs  = gridspec.GridSpec(1, 2,)
-ax0 = plt.subplot(gs[0])
-ax1 = plt.subplot(gs[1])
-
-ax0.set_title("Covariance matrix")
-ax1.set_title("Inverse covariance matrix")
-im0 = ax0.imshow(cov, origin="lower", cmap='bwr')
-im1 = ax1.imshow(cov_inv, origin="lower", cmap='bwr')
-# im0 = ax0.imshow(cov_inv, origin="lower", cmap='bwr', vmin=-1e17, vmax=-1e14)
-# im1 = ax1.imshow(cov_inv, origin="lower", cmap='bwr', vmin=1e14, vmax=1e17)
-
-fig.colorbar(im0, fraction=0.046, pad=0.04)
-fig.colorbar(im1, fraction=0.046, pad=0.04) #, ticks=np.linspace(-1, 1, 5))
-
-# plt.savefig(
-#     "/uio/hume/student-u74/vetleav/Documents/thesis/ParameterInference/figures/likelihood_tests/cov_and_cov_inverse.png",
-#     bbox_inches="tight",
-#     dpi=200,
-#     pad_inches=0.05,
-# )

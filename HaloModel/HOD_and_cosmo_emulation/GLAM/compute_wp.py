@@ -8,10 +8,10 @@ from Corrfunc.theory.wp import wp
 from pycorr import TwoPointCorrelationFunction
 
 
-OUTPATH     = Path(f"/mn/stornext/d5/data/vetleav/HOD_AbacusData/inference_data")
-HOD_FILE    = Path(OUTPATH / "halocat_fiducial_MGGLAM_ng_fixed.hdf5")
+OUTPATH     = Path(f"/mn/stornext/d5/data/vetleav/HOD_AbacusData/inference_data/MGGLAM")
+HOD_FILE    = Path(OUTPATH / "halocat_fiducial_ng_fixed.hdf5")
 if not HOD_FILE.exists():
-    raise FileNotFoundError(f"{HOD_FILE} does not exist. Run make_fiducial_HOD_catalogue_hdf5_files.py")
+    raise FileNotFoundError(f"{HOD_FILE} does not exist. Run make_HOD.py first")
 
 
 def compute_wp_of_s_z_from_HOD_catalogue(
@@ -21,7 +21,7 @@ def compute_wp_of_s_z_from_HOD_catalogue(
         ):
 
     # Create outfile for wp 
-    outfile = Path(OUTPATH / "wp_from_sz_fiducial_MGGLAM_ng_fixed.hdf5")
+    outfile = Path(OUTPATH / "wp_from_sz_fiducial_ng_fixed.hdf5")
     if outfile.exists():
         input(f"{outfile} exists. Press enter to overwrite.")
     print(f"Computing wp for {outfile}")
@@ -90,7 +90,7 @@ def compute_tpcf_from_HOD_catalogue(
         ):
     
     # Create outfile for tpcf
-    outfile = Path(OUTPATH / "tpcf_r_fiducial_MGGLAM_ng_fixed.hdf5")
+    outfile = Path(OUTPATH / "tpcf_r_fiducial_ng_fixed.hdf5")
     if outfile.exists():
         input(f"{outfile} exists. Press enter to overwrite.")
     print(f"Computing TPCF for {outfile}")

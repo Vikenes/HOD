@@ -55,8 +55,8 @@ galaxy_fiducial=Galaxy(
 
 
 # Make output files for HOD catalogues
-OUTPATH = Path(f"/mn/stornext/d5/data/vetleav/HOD_AbacusData/inference_data")
-outfile = Path(OUTPATH / "halocat_fiducial_MGGLAM_ng_fixed.hdf5")
+OUTPATH = Path(f"/mn/stornext/d5/data/vetleav/HOD_AbacusData/inference_data/MGGLAM")
+outfile = Path(OUTPATH / "halocat_fiducial_ng_fixed.hdf5")
 if outfile.exists():
     input(f"{outfile} exists. Press enter to overwrite.")
 
