@@ -159,12 +159,17 @@ ax1.set_ylabel(r'$r_{\perp} w_{p}(r_{\perp})$')
 ax1.set_title(r'$w_p$ from $\xi(r)$')
 
 
-plt.show()
-# plt.savefig(
-#     "wp_plot_individual_and_mean.pdf",
-#     bbox_inches="tight",
-#     pad_inches=0.05,
-# )
+# plt.show()
+figname = Path("figures/wp_plot_individual_and_mean.png")
+if figname.exists():
+    plt.show()
+else:
+    plt.savefig(
+        figname,
+        bbox_inches="tight",
+        pad_inches=0.05,
+        dpi=200,
+    )
 
 
 
