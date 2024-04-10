@@ -36,6 +36,10 @@ def load_log10Mmin_MGGLAM(infile="log10Mmin_MGGLAM"):
     else:
         raise FileNotFoundError(f"{infile} does not exist. Save file first.")
     
+def get_log10Mmin_MGGLAM_mean(infile="log10Mmin_MGGLAM"):
+    log10Mmin = load_log10Mmin_MGGLAM(infile)
+    return np.mean(log10Mmin)
+
 def store_cosmo_params():
     from astropy.cosmology import Planck15, wCDM
 
@@ -81,11 +85,13 @@ def store_cosmo_params():
 
 
 # HOD_parameters 
-sigma_logM  = 0.6915 
-log10M1     = 14.42 # h^-1 Msun
-kappa       = 0.51 
-alpha       = 0.9168  
+HOD_PARAMS_PATH  = f"/mn/stornext/d13/euclid_nobackup/halo/AbacusSummit/emulation_files"
+HOD_PARAMS          = pd.read_csv(f"{HOD_PARAMS_PATH}/AbacusSummit_base_c000_ph000/HOD_parameters/HOD_parameters_fiducial_ng_fixed.csv")
+
+sigma_logM  = HOD_PARAMS["sigma_logM"][0]#0.6915 
+log10M1     = HOD_PARAMS["log10M1"][0]#14.42 # h^-1 Msun
+kappa       = HOD_PARAMS["kappa"][0]#0.51 
+alpha       = HOD_PARAMS["alpha"][0]#0.9168  
 log10Mmin   = np.mean(load_log10Mmin_MGGLAM("log10Mmin_MGGLAM"))
 
 filename = "/mn/stornext/d8/data/chengzor/MGGLAMx100/GR_halocat_z0.25.hdf5"
-
