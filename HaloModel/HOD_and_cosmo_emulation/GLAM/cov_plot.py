@@ -49,7 +49,7 @@ def plot_cov_cov_inv(cov):
         fig.savefig(figname, 
                     bbox_inches="tight", 
                     dpi=200)
-        fig.clf()
+        plt.clf(fig)
 
 def plot_corr(corr):
     fig = plt.figure(figsize=(12, 5))
@@ -75,7 +75,7 @@ def plot_corr(corr):
         fig.savefig(figname, 
                     bbox_inches="tight", 
                     dpi=200)
-        fig.clf()
+        plt.clf(fig)
 
 def compare_cov_sz_and_cov_GLAM(cov_GLAM, cov_OLD):
     cov_inv_GLAM = get_cov_inv(cov_GLAM) # GLAM
@@ -116,7 +116,7 @@ def compare_cov_sz_and_cov_GLAM(cov_GLAM, cov_OLD):
         fig.savefig(figname, 
                     bbox_inches="tight", 
                     dpi=200)
-        fig.clf()
+        plt.clf(fig)
 
 
 def check_cov(cov):
