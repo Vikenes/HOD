@@ -137,6 +137,78 @@ def estimate_log10Mmin_from_gal_num_density(
 
 
 
+def estimate_log10Mmin_from_gal_num_density_small(
+        arrays_path:      str,
+        sigma_logM_array: ArrayLike,
+        log10M1_array:    ArrayLike,
+        kappa_array:      ArrayLike,
+        alpha_array:      ArrayLike,
+        ng_desired:       float = 2.174e-4, 
+        ) -> ArrayLike:
+    
+    """
+    Finds the appropriate value of log10Mmin that yields ng = ng_desired.
+    Computes ng with Eq. (19) in https://doi.org/10.1093/mnras/stad1207
+    """
+
+    # Define cosmology and simparams 
+    cosmology   = Cosmology.from_custom(run=0, emulator_data_path=f"{D13_BASE_PATH}/AbacusSummit_base_c000_ph000")
+    redshift    = 0.25 
+    boxsize     = 500.0
+    
+    # Load halo pos,vel,mass arrays
+    pos  = np.load(arrays_path / "L1_pos.npy")  # shape: (N_halos, 3)
+    vel  = np.load(arrays_path / "L1_vel.npy")  # shape: (N_halos, 3)
+    mass = np.load(arrays_path / "L1_mass.npy") # shape: (N_halos,)
+
+    # Make halo catalogue
+    # Used to compute the HMF which is needed to compute ng (see https://doi.org/10.1093/mnras/stad1207)
+    halocat = HaloCatalogue(
+        pos,
+        vel,
+        mass,
+        boxsize,
+        conc_mass_model=diemer15,
+        cosmology=cosmology,
+        redshift=redshift,
+        )
+    
+    # Compute HMF from halo catalogue 
+    N           = 201
+    mass_edges  = np.logspace(np.log10(np.min(mass)), np.log10(np.max(mass)), N)
+    dn_dM       = halocat.compute_hmf(mass_edges)
+    mass_center = 0.5 * (mass_edges[1:] + mass_edges[:-1])
+
+    # Estimate ng from halo catalogue
+    # The log10Mmin range chosen has been tested. 
+    # it yields ng values around 2.174e-4 for all parameter sets.
+    N_Mmin        = 300
+    log10Mmin_arr = np.linspace(13.0, 14.5, N_Mmin) 
+
+
+    # Loop through parameter sets and estimate log10Mmin that yields ng = ng_desired
+    ng_arr = compute_ng_analytical(log10Mmin_arr, 
+                            sigma_logM_array, 
+                            log10M1_array, 
+                            kappa_array, 
+                            alpha_array, 
+                            mass_center, 
+                            dn_dM)
+        
+    # Use spline interpolation to find log10Mmin for ng = ng_desired
+    # log10Mmin is a very well-behaved function 
+    ng_sorted_idx    = np.argsort(ng_arr)
+    log10Mmin_spline = UnivariateSpline(
+        ng_arr[ng_sorted_idx], 
+        log10Mmin_arr[ng_sorted_idx], 
+        k=3, 
+        s=0
+        )
+
+
+    return log10Mmin_spline(ng_desired)
+
+
 def estimate_log10Mmin_from_gal_num_density_MGGLAM(
         sigma_logM_array: ArrayLike,
         log10M1_array:    ArrayLike,
