@@ -49,7 +49,8 @@ def plot_cov_cov_inv(cov):
         fig.savefig(figname, 
                     bbox_inches="tight", 
                     dpi=200)
-        fig.clf()
+        # fig.clf()
+        plt.close(fig)
 
 def plot_corr(corr):
     fig = plt.figure(figsize=(12, 5))
@@ -75,7 +76,8 @@ def plot_corr(corr):
         fig.savefig(figname, 
                     bbox_inches="tight", 
                     dpi=200)
-        fig.clf()
+        # fig.clf()
+        plt.close(fig)
 
 def compare_cov_sz_and_cov_GLAM(cov_NEW, cov_GLAM):
     cov_inv_GLAM = get_cov_inv(cov_GLAM) # GLAM
@@ -88,16 +90,16 @@ def compare_cov_sz_and_cov_GLAM(cov_NEW, cov_GLAM):
     ax2 = plt.subplot(gs[2])
     ax3 = plt.subplot(gs[3])
 
-    ax0.set_title("Covariance NEW")
+    ax0.set_title("Covariance Abacus small")
     ax1.set_title("Covariance GLAM")
-    ax2.set_title("Inverse covariance NEW")
+    ax2.set_title("Inverse covariance Abacus small")
     ax3.set_title("Inverse covariance GLAM")
 
     # im0 = ax0.imshow(np.log(cov_GLAM), origin="lower", cmap='bwr', interpolation="none")
-    im0 = ax1.imshow(cov_NEW, origin="lower", cmap='bwr', norm=LogNorm())
-    im1 = ax0.imshow(cov_GLAM, origin="lower", cmap='bwr', norm=LogNorm())
-    im2 = ax3.imshow(cov_inv_NEW, origin="lower", cmap='bwr')
-    im3 = ax2.imshow(cov_inv_GLAM, origin="lower", cmap='bwr')
+    im0 = ax0.imshow(cov_NEW, origin="lower", norm=LogNorm())
+    im1 = ax1.imshow(cov_GLAM, origin="lower", norm=LogNorm())
+    im2 = ax2.imshow(cov_inv_NEW, origin="lower")
+    im3 = ax3.imshow(cov_inv_GLAM, origin="lower",)
     
 
     fig.colorbar(im0, fraction=0.046, pad=0.04)
@@ -116,7 +118,7 @@ def compare_cov_sz_and_cov_GLAM(cov_NEW, cov_GLAM):
         fig.savefig(figname, 
                     bbox_inches="tight", 
                     dpi=200)
-        fig.clf()
+        plt.close(fig)
 
 
 def check_cov(cov):
@@ -138,9 +140,11 @@ cov_sz, corr_sz = load_cov_corr(
 cov_sz   /= 64.0 
 cov_GLAM /= 8.0
 
-check_cov(cov_sz)
-check_cov(cov_GLAM)
-# plot_cov_cov_inv(cov_GLAM)
-# plot_corr(corr_GLAM)
+# check_cov(cov_sz)
+# check_cov(cov_GLAM)
+# plot_cov_cov_inv(cov_sz)
+# plot_corr(corr_sz)
 compare_cov_sz_and_cov_GLAM(cov_sz, cov_GLAM)
+# print(cov_GLAM[0])
+
 
