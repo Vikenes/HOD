@@ -7,7 +7,8 @@ import concurrent.futures
 
 from numdens_HOD import estimate_log10Mmin_from_gal_num_density
 
-# DATAPATH = Path("mn/stornext/d5/data/vetleav/HOD_AbacusData/c000_LCDM_simulation/HOD_parameters")
+
+DATAPATH = Path("mn/stornext/d5/data/vetleav/HOD_AbacusData/c000_LCDM_simulation/HOD_parameters")
 D13_BASE_PATH       = "/mn/stornext/d13/euclid_nobackup/halo/AbacusSummit"
 D13_EMULATION_PATH  = f"{D13_BASE_PATH}/emulation_files"
 
@@ -82,7 +83,8 @@ def make_csv_files(
         # Create LHS sampler
         LHC_sampler = LHS(
             xlimits      = param_limits, 
-            criterion    = "corr"
+            criterion    = "corr", 
+            random_state=0
         ) 
         # Sample parameters
         samples     = dataset_config_size[dataset]
@@ -97,12 +99,10 @@ def make_csv_files(
                 ng_desired          = ng_desired,
                 version             = version,
                 phase               = phase,
-                test                = False,
                 )
 
             node_params = np.hstack((log10Mmin[:, np.newaxis], node_params))
             print(f"Estimating log10Mmin for {simname}/{dataset} dataset took {time.time() - start:.2f} seconds.")
-            
         # Save parameters to csv file
         df = pd.DataFrame({
             'log10Mmin'     : node_params[:, 0],
@@ -112,15 +112,15 @@ def make_csv_files(
             'alpha'         : node_params[:, 4],
         })
         
-        if not test:
-            # Save to csv file
-            df.to_csv(
-                outfile,
-                index=False
-            )
+        # Save to csv file
+        df.to_csv(
+            outfile,
+            index=False
+        )
         # else:
             # print("Successfully created parameter file for testing.")
             # print(f" - Parameters for {dataset} dataset has shape {node_params.shape}")
+
 
 def make_csv_files_phase_wrapper(phase):
     make_csv_files(
@@ -143,45 +143,6 @@ def make_csv_files_version_wrapper(version):
         phase       = 0,
         test        = False
     )
-
-# make_csv_files(num_train=500,
-#                num_test=100,
-#                num_val=100,
-#                fix_ng=True)
-
-def test_make_csv_files(
-        version_test=True, 
-        phase_test=True, 
-        parallel=True
-        ):
-    if version_test:
-        func = make_csv_files_version_wrapper
-        arg_range = range(3,6)
-        print("Testing make_csv_files for all versions.")
-    elif phase_test:
-        func = make_csv_files_phase_wrapper
-        arg_range = range(0,25)
-        print("Testing make_csv_files for all phases.")
-    else:
-        func = make_csv_files_version_wrapper
-        arg_range = range(0,4)
-        print("Testing make_csv_files for all versions.")
-
-    if parallel:
-        print(f"Using parallel with function {func.__name__} and arg_range {arg_range}")
-        with concurrent.futures.ProcessPoolExecutor() as executor:
-            executor.map(func, [i for i in arg_range])
-    else:
-        make_csv_files(
-            num_train   = 100,
-            num_test    = 20,
-            num_val     = 20,
-            fix_ng      = True,
-            version     = 0,
-            phase       = 0,
-            test        = True,
-        )
-
 
 
 def make_csv_files_broad_emulator_grid(parallel=True):
@@ -244,8 +205,6 @@ def make_csv_files_c000_all_phases(parallel=True):
 
 
 
-make_csv_files(version=4, phase=0, test=False)
-
+# make_csv_files_c000_all_phases(parallel=True)
 # make_csv_files_linear_derivative_grid(parallel=True, include_c00_=True)
 # make_csv_files_broad_emulator_grid(parallel=True)
-# make_csv_files_c000_all_phases(parallel=True)
