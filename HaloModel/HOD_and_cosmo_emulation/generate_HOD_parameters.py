@@ -95,6 +95,8 @@ def make_csv_files(
                 kappa_array         = node_params[:, 2],
                 alpha_array         = node_params[:, 3],
                 ng_desired          = ng_desired,
+                version             = version,
+                phase               = phase,
                 test                = False,
                 )
 
