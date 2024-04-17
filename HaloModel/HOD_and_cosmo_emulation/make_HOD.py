@@ -3,7 +3,7 @@ import h5py
 import time 
 from dq import Cosmology
 import hmd
-from hmd.catalogue import ParticleCatalogue, HaloCatalogue, GalaxyCatalogue
+from hmd.catalogue import HaloCatalogue
 from hmd.occupation import Zheng07Centrals, Zheng07Sats
 from hmd.galaxy import Galaxy
 from hmd.profiles import FixedCosmologyNFW
@@ -17,9 +17,8 @@ import concurrent.futures
 import warnings
 warnings.filterwarnings("ignore", message='Astropy cosmology class contains massive neutrinos, which are not taken into account in Colossus.')
 
-notes = []
-
 D13_BASE_PATH           = "/mn/stornext/d13/euclid_nobackup/halo/AbacusSummit"
+HOD_PROPERTIES_TO_SAVE = ["x", "y", "z", "s_z"]
 
 dataset_names = ['train', 'test', 'val']
 
@@ -56,14 +55,11 @@ def make_hdf5_files_single_version(
         # Set up cosmology and simulation info 
         # Uses the cosmology.dat file found in the HOD_DATA_PATH
         cosmology = Cosmology.from_custom(run=0, emulator_data_path=HOD_DATA_PATH)
-        redshift  = 0.25 
-        boxsize   = 2000.0
         
         # Make hdf5 file
         fff = h5py.File(f"{OUTFILEPATH}/{outfname}", "w")
 
         # Store cosmology and simulation info in hdf5 file
-        fff.attrs["boxsize"]            = boxsize
         fff.attrs["H0"]                 = float(cosmology.H0.value)
         fff.attrs["Om0"]                = cosmology.Om0
         fff.attrs["Ode0"]               = cosmology.Ode0
@@ -89,10 +85,10 @@ def make_hdf5_files_single_version(
             pos,
             vel,
             mass,
-            boxsize,
+            boxsize         = 2000.0,
             conc_mass_model = hmd.concentration.diemer15,
             cosmology       = cosmology,
-            redshift        = redshift,
+            redshift        = 0.25,
             )
 
         # Loop over HOD parameters 
@@ -123,7 +119,7 @@ def make_hdf5_files_single_version(
                 sat_occ             = Zheng07Sats(),
                 satellite_profile   = FixedCosmologyNFW(
                     cosmology       = halocat.cosmology,
-                    redshift        = redshift,
+                    redshift        = 0.25,
                     mdef            = "200m",
                     conc_mass_model = "dutton_maccio14",
                     sigmaM          = None,
@@ -141,53 +137,42 @@ def make_hdf5_files_single_version(
             # Load galaxy catalogue
             galaxy_df           = maker.galaxy_df
 
-            # Get number of central and satellite galaxies
-            galaxy_df_central   = galaxy_df[galaxy_df['galaxy_type'] == 'central']
-            galaxy_df_satellite = galaxy_df[galaxy_df['galaxy_type'] == 'satellite']
+
+            # Add redshift-space distortions to z-coordinate 
+            galaxy_df["s_z"] = halocat.apply_redshift_distortion(
+                galaxy_df['z'],
+                galaxy_df['v_z'],
+            )
 
             # Compute number density of galaxies and store it in hdf5 file
-            box_volume = boxsize**3
+            box_volume = 2000.0**3
             ng = len(galaxy_df) / box_volume
-            nc = len(galaxy_df_central) / box_volume
-            ns = len(galaxy_df_satellite) / box_volume
-
             HOD_group.attrs['ng'] = ng
-            HOD_group.attrs['nc'] = nc
-            HOD_group.attrs['ns'] = ns
-
-            # Convert galaxy type from string to int
-            galaxy_df['galaxy_type'] = galaxy_df['galaxy_type'].replace(["central"], 0)
-            galaxy_df['galaxy_type'] = galaxy_df['galaxy_type'].replace(["satellite"], 1)
-            galaxy_df.astype({'galaxy_type': int})
 
             # Store galaxy catalogue in hdf5 file
             # galaxy_properties:
-            #  - host_mass, host_radius, host_concentration
-            #  - x, y, z, v_x, v_y, v_z
-            #  - galaxy_type
-            #  - host_centric_distance, host_id 
-
-
-            galaxy_properties = galaxy_df.columns.values.tolist()
-            
-            for prop in galaxy_properties:
+            #  - x, y, z, s_z
+           
+            for prop in HOD_PROPERTIES_TO_SAVE:
                 HOD_group.create_dataset(
                     prop, 
                     data = galaxy_df[prop].values,
                     dtype= galaxy_df[prop].dtypes
                     )
-            # if node_idx % print_every_n == 0 or node_idx == len(node_params_df) - 1:
-                # print(f"complete, duration: {time.time() - t0:.2f} sec.")
 
         fff.close()
         print(f"{simname}-{flag} complete. Duration: {time.time() - t0_flag_total:.2f} sec.")
 
     print(f"{simname} complete. Duration: {time.time() - t0_total:.2f} sec.")
 
-def make_hdf5_files_c000_all_phases(
+
+def make_hdf5_files_c000_phases_parallel(
+        start,
+        stop ,
         parallel=True
         ):
-    phases = np.arange(0,25)
+    phases = np.arange(start,stop)
+    return 
     t000 = time.time()
     if parallel:
         with concurrent.futures.ProcessPoolExecutor() as executor:
@@ -205,29 +190,64 @@ def make_hdf5_files_c000_all_phases(
     print(f"Total duration: {tot_dur:.2f} sec")
 
 
-def make_hdf5_files_all_emulator_versions(parallel=True):
-    versions = np.arange(130, 182)
+
+
+def make_hdf5_files_emulator_versions_parallel(
+        start,
+        stop,
+        parallel=True
+        ):
+    versions = np.arange(start, stop)
+    return 
     t000 = time.time()
     if parallel:
         with concurrent.futures.ProcessPoolExecutor() as executor:
             executor.map(make_hdf5_files_single_version, [v for v in versions], [0 for v in versions])
     print(f"Total duration: {time.time() - t000:.2f} sec")
 
-def make_hdf5_files_non_emulator_versions(parallel=True):
+def make_hdf5_files_c001_c004_parallel():
     versions = np.arange(1,5)
-    versions = np.concatenate((versions, np.arange(100, 127)))
+    return 
+    t000 = time.time()
+    with concurrent.futures.ProcessPoolExecutor() as executor:
+        executor.map(make_hdf5_files_single_version, [v for v in versions], [0 for v in versions])
+    print(f"Total duration: {time.time() - t000:.2f} sec")
+
+def make_hdf5_files_lindergrid_parallel(
+        start,
+        stop,
+        parallel=True
+        ):
+    versions = np.arange(start, stop)
+    return 
     t000 = time.time()
     if parallel:
         with concurrent.futures.ProcessPoolExecutor() as executor:
             executor.map(make_hdf5_files_single_version, [v for v in versions], [0 for v in versions])
     print(f"Total duration: {time.time() - t000:.2f} sec")
 
-make_hdf5_files_single_version(
-    version=4,
-    phase=0,
-    ng_fixed=True
-    )
+def make_hdf5_files_c000_all_phases(
+        N_parallell=5,
+        parallel=True):
+    for i in range(0, 25, N_parallell):
+        make_hdf5_files_c000_phases_parallel(i, i+N_parallell, parallel=parallel)
 
-# make_hdf5_files_c000_all_phases(parallel=True)
+def make_hdf5_files_all_emulator_versions(
+        N_parallel=4,
+        parallel=True
+        ):
+    for i in range(130, 182, N_parallel):
+        make_hdf5_files_emulator_versions_parallel(i, i+N_parallel, parallel=parallel)
+
+        
+def make_hdf5_files_all_lindergrid_versions(
+        N_parallel=3,
+        parallel=True
+        ):
+    for i in range(100, 126, N_parallel):
+        make_hdf5_files_lindergrid_parallel(i, i+N_parallel, parallel=parallel)
+
+# make_hdf5_files_c000_all_phases()
+# make_hdf5_files_c001_c004_parallel()
 # make_hdf5_files_all_emulator_versions(parallel=True)
-# make_hdf5_files_non_emulator_versions(parallel=True)
+# make_hdf5_files_all_lindergrid_versions(parallel=True)
