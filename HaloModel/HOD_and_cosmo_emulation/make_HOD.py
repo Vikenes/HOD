@@ -18,7 +18,7 @@ import warnings
 warnings.filterwarnings("ignore", message='Astropy cosmology class contains massive neutrinos, which are not taken into account in Colossus.')
 
 D13_BASE_PATH           = "/mn/stornext/d13/euclid_nobackup/halo/AbacusSummit"
-HOD_PROPERTIES_TO_SAVE = ["x", "y", "z", "s_z"]
+HOD_PROPERTIES_TO_SAVE = ["x", "y", "z", "s_z"]#, "v_x", "v_y", "v_z"]
 
 dataset_names = ['train', 'test', 'val']
 
