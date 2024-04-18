@@ -37,6 +37,28 @@ def make_hdf5_files_single_version(
 
     Path(OUTFILEPATH).mkdir(parents=False, exist_ok=True) # Create directory if it doesn't exist and don't create if parent doesn't exist
 
+    # Set up cosmology and simulation info 
+    # Uses the cosmology.dat file found in the HOD_DATA_PATH
+    cosmology = Cosmology.from_custom(run=0, emulator_data_path=HOD_DATA_PATH)
+
+    # Load pos, vel and mass of halos with mass > 1e12 h^-1 Msun
+    pos  = np.load(f"{HALO_ARRAYS_PATH}/L1_pos.npy")  # shape: (N_halos, 3)
+    vel  = np.load(f"{HALO_ARRAYS_PATH}/L1_vel.npy")  # shape: (N_halos, 3)
+    mass = np.load(f"{HALO_ARRAYS_PATH}/L1_mass.npy") # shape: (N_halos,)
+
+
+    # Make halo catalogue. 
+    # Note: The halo catalogue is independent of the HOD parameters.
+    halocat = HaloCatalogue(
+        pos,
+        vel,
+        mass,
+        boxsize         = 2000.0,
+        conc_mass_model = hmd.concentration.diemer15,
+        cosmology       = cosmology,
+        redshift        = 0.25,
+        )
+
     print(f"Making hdf5 files for {simname}...")
     t0_total = time.time()
     for flag in dataset_names:
@@ -51,10 +73,6 @@ def make_hdf5_files_single_version(
             # Prevent overwriting to save time 
             print(f"File {OUTFILE} already exists, skipping...")
             continue
-
-        # Set up cosmology and simulation info 
-        # Uses the cosmology.dat file found in the HOD_DATA_PATH
-        cosmology = Cosmology.from_custom(run=0, emulator_data_path=HOD_DATA_PATH)
         
         # Make hdf5 file
         fff = h5py.File(f"{OUTFILEPATH}/{outfname}", "w")
@@ -70,26 +88,10 @@ def make_hdf5_files_single_version(
         fff.attrs["lnAs"]               = cosmology.lnAs
         fff.attrs["n_s"]                = cosmology.n_s
 
-        # Load pos, vel and mass of halos with mass > 1e12 h^-1 Msun
-        pos  = np.load(f"{HALO_ARRAYS_PATH}/L1_pos.npy")  # shape: (N_halos, 3)
-        vel  = np.load(f"{HALO_ARRAYS_PATH}/L1_vel.npy")  # shape: (N_halos, 3)
-        mass = np.load(f"{HALO_ARRAYS_PATH}/L1_mass.npy") # shape: (N_halos,)
-
         # Load HOD parameters
         hod_params_fname = f"{HOD_PARAMETERS_PATH}/HOD_parameters_{filename_suffix}.csv"
         node_params_df   = pd.read_csv(hod_params_fname)
 
-        # Make halo catalogue. 
-        # Note: The halo catalogue is independent of the HOD parameters.
-        halocat = HaloCatalogue(
-            pos,
-            vel,
-            mass,
-            boxsize         = 2000.0,
-            conc_mass_model = hmd.concentration.diemer15,
-            cosmology       = cosmology,
-            redshift        = 0.25,
-            )
 
         # Loop over HOD parameters 
         # Populate halos with galaxies for each HOD parameter set 
