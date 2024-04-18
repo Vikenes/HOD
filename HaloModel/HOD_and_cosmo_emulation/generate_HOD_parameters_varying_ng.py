@@ -67,7 +67,7 @@ def make_csv_files(
         fname   = Path(f"HOD_parameters_{dataset}.csv")
         outfile = Path(HOD_PARAMETERS_PATH / fname)
         if outfile.exists():
-            print(f"File {outfile} already exists. Skipping.")
+            print(f"File {outfile.name} already exists. Skipping.")
             continue
 
         # Create LHS sampler
@@ -99,7 +99,7 @@ def make_csv_files(
             'log10M1'       : node_params[:, 2],
             'kappa'         : node_params[:, 3],
             'alpha'         : node_params[:, 4],
-            'log_ng'        : node_params[:, 5],
+            'log10_ng'      : node_params[:, 5],
         })
         
         # Save to csv file
