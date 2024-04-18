@@ -18,14 +18,16 @@ import warnings
 warnings.filterwarnings("ignore", message='Astropy cosmology class contains massive neutrinos, which are not taken into account in Colossus.')
 
 D13_BASE_PATH           = "/mn/stornext/d13/euclid_nobackup/halo/AbacusSummit"
-HOD_PROPERTIES_TO_SAVE = ["x", "y", "z", "s_z"]#, "v_x", "v_y", "v_z"]
+HOD_PROPERTIES_TO_SAVE  = ["x", "y", "z", "s_z"]
+# dataset_names           = ['train', 'test', 'val']
 
-dataset_names = ['train', 'test', 'val']
+BOX_VOLUME              = 2000.0**3
 
 def make_hdf5_files_single_version(
-        version:    int  = 0,
-        phase:      int  = 0,
-        ng_fixed:   bool = True
+        version:    int,
+        phase:      int,
+        ng_fixed:   bool,
+        dataset_flags: list,
         ):
     print_every_n = 25 
 
@@ -61,7 +63,7 @@ def make_hdf5_files_single_version(
 
     print(f"Making hdf5 files for {simname}...")
     t0_total = time.time()
-    for flag in dataset_names:
+    for flag in dataset_flags:
         # print(f"Computing for flag={flag}")
         filename_suffix = f"{flag}"
         if ng_fixed:
@@ -75,94 +77,96 @@ def make_hdf5_files_single_version(
             continue
         
         # Make hdf5 file
-        fff = h5py.File(f"{OUTFILEPATH}/{outfname}", "w")
+        with h5py.File(f"{OUTFILEPATH}/{outfname}", "w") as fff:
 
-        # Store cosmology and simulation info in hdf5 file
-        fff.attrs["H0"]                 = float(cosmology.H0.value)
-        fff.attrs["Om0"]                = cosmology.Om0
-        fff.attrs["Ode0"]               = cosmology.Ode0
-        fff.attrs["w0"]                 = cosmology.w0
-        fff.attrs["wc0"]                = cosmology.wc0
-        fff.attrs["Ob0"]                = cosmology.Ob0
-        fff.attrs["Neff"]               = cosmology.Neff
-        fff.attrs["lnAs"]               = cosmology.lnAs
-        fff.attrs["n_s"]                = cosmology.n_s
+            # Store cosmology and simulation info in hdf5 file
+            fff.attrs["H0"]                 = float(cosmology.H0.value)
+            fff.attrs["Om0"]                = cosmology.Om0
+            fff.attrs["Ode0"]               = cosmology.Ode0
+            fff.attrs["w0"]                 = cosmology.w0
+            fff.attrs["wc0"]                = cosmology.wc0
+            fff.attrs["Ob0"]                = cosmology.Ob0
+            fff.attrs["Neff"]               = cosmology.Neff
+            fff.attrs["lnAs"]               = cosmology.lnAs
+            fff.attrs["n_s"]                = cosmology.n_s
 
-        # Load HOD parameters
-        hod_params_fname = f"{HOD_PARAMETERS_PATH}/HOD_parameters_{filename_suffix}.csv"
-        node_params_df   = pd.read_csv(hod_params_fname)
-
-
-        # Loop over HOD parameters 
-        # Populate halos with galaxies for each HOD parameter set 
-
-        t0_flag = time.time()
-        t0_flag_total = time.time()
-        for node_idx in range(len(node_params_df)):
-
-            if node_idx % print_every_n == 0 and node_idx != 0 or node_idx == len(node_params_df) - 1:
-                print(f"{simname}-{flag}-nodes {node_idx-print_every_n}-{node_idx} complete.", end=" ")
-                print(f"Duration: {time.time() - t0_flag:.2f} sec.")
-                t0_flag = time.time()
-            
-
-            # Store HOD parameters in hdf5 file
-            HOD_group                     = fff.create_group(f"node{node_idx}") 
-            HOD_group.attrs['log10Mmin']  = node_params_df['log10Mmin'].iloc[node_idx]
-            HOD_group.attrs['sigma_logM'] = node_params_df['sigma_logM'].iloc[node_idx]
-            HOD_group.attrs['log10M1']    = node_params_df['log10M1'].iloc[node_idx]
-            HOD_group.attrs['kappa']      = node_params_df['kappa'].iloc[node_idx]
-            HOD_group.attrs['alpha']      = node_params_df['alpha'].iloc[node_idx]
-
-            # Populate halos with galaxies
-            maker = HODMaker(
-                halo_catalogue      = halocat,
-                central_occ         = Zheng07Centrals(),
-                sat_occ             = Zheng07Sats(),
-                satellite_profile   = FixedCosmologyNFW(
-                    cosmology       = halocat.cosmology,
-                    redshift        = 0.25,
-                    mdef            = "200m",
-                    conc_mass_model = "dutton_maccio14",
-                    sigmaM          = None,
-                    ),
-                galaxy=Galaxy(
-                    logM_min    = node_params_df['log10Mmin'].iloc[node_idx],
-                    sigma_logM  = node_params_df['sigma_logM'].iloc[node_idx],
-                    logM1       = node_params_df['log10M1'].iloc[node_idx],
-                    kappa       = node_params_df['kappa'].iloc[node_idx],
-                    alpha       = node_params_df['alpha'].iloc[node_idx]
-                    ),
-                )
-            maker()
-
-            # Load galaxy catalogue
-            galaxy_df           = maker.galaxy_df
+            # Load HOD parameters
+            hod_params_fname = f"{HOD_PARAMETERS_PATH}/HOD_parameters_{filename_suffix}.csv"
+            node_params_df   = pd.read_csv(hod_params_fname)
 
 
-            # Add redshift-space distortions to z-coordinate 
-            galaxy_df["s_z"] = halocat.apply_redshift_distortion(
-                galaxy_df['z'],
-                galaxy_df['v_z'],
-            )
+            # Loop over HOD parameters 
+            # Populate halos with galaxies for each HOD parameter set 
 
-            # Compute number density of galaxies and store it in hdf5 file
-            box_volume = 2000.0**3
-            ng = len(galaxy_df) / box_volume
-            HOD_group.attrs['ng'] = ng
+            t0_flag = time.time()
+            t0_flag_total = time.time()
+            for node_idx in range(len(node_params_df)):
 
-            # Store galaxy catalogue in hdf5 file
-            # galaxy_properties:
-            #  - x, y, z, s_z
-           
-            for prop in HOD_PROPERTIES_TO_SAVE:
-                HOD_group.create_dataset(
-                    prop, 
-                    data = galaxy_df[prop].values,
-                    dtype= galaxy_df[prop].dtypes
+                if node_idx % print_every_n == 0 and node_idx != 0 or node_idx == len(node_params_df) - 1:
+                    print(f"{simname}-{flag}-nodes {node_idx-print_every_n}-{node_idx} complete.", end=" ")
+                    print(f"Duration: {time.time() - t0_flag:.2f} sec.")
+                    t0_flag = time.time()
+                
+
+                # Store HOD parameters in hdf5 file
+                HOD_group                     = fff.create_group(f"node{node_idx}") 
+                HOD_group.attrs['log10Mmin']  = node_params_df['log10Mmin'].iloc[node_idx]
+                HOD_group.attrs['sigma_logM'] = node_params_df['sigma_logM'].iloc[node_idx]
+                HOD_group.attrs['log10M1']    = node_params_df['log10M1'].iloc[node_idx]
+                HOD_group.attrs['kappa']      = node_params_df['kappa'].iloc[node_idx]
+                HOD_group.attrs['alpha']      = node_params_df['alpha'].iloc[node_idx]
+                HOD_group.attrs['log10_ng']   = node_params_df['log10_ng'].iloc[node_idx]
+
+
+                # Populate halos with galaxies
+                maker = HODMaker(
+                    halo_catalogue      = halocat,
+                    central_occ         = Zheng07Centrals(),
+                    sat_occ             = Zheng07Sats(),
+                    satellite_profile   = FixedCosmologyNFW(
+                        cosmology       = halocat.cosmology,
+                        redshift        = 0.25,
+                        mdef            = "200m",
+                        conc_mass_model = "dutton_maccio14",
+                        sigmaM          = None,
+                        ),
+                    galaxy=Galaxy(
+                        logM_min    = node_params_df['log10Mmin'].iloc[node_idx],
+                        sigma_logM  = node_params_df['sigma_logM'].iloc[node_idx],
+                        logM1       = node_params_df['log10M1'].iloc[node_idx],
+                        kappa       = node_params_df['kappa'].iloc[node_idx],
+                        alpha       = node_params_df['alpha'].iloc[node_idx]
+                        ),
                     )
+                maker()
 
-        fff.close()
+                # Load galaxy catalogue
+                galaxy_df           = maker.galaxy_df
+
+
+                # Add redshift-space distortions to z-coordinate 
+                galaxy_df["s_z"] = halocat.apply_redshift_distortion(
+                    galaxy_df['z'],
+                    galaxy_df['v_z'],
+                )
+
+                # Compute number density of galaxies and store it in hdf5 file
+                ng = len(galaxy_df) / BOX_VOLUME
+                HOD_group.attrs['ng'] = ng
+                assert np.abs(ng - 10**node_params_df['log10_ng'].iloc[node_idx]) < 1e-5, f"ng={ng:.5e} != 10^{node_params_df['log10_ng'].iloc[node_idx]:.5f}" 
+
+
+                # Store galaxy catalogue in hdf5 file
+                # galaxy_properties:
+                #  - x, y, z, s_z
+            
+                for prop in HOD_PROPERTIES_TO_SAVE:
+                    HOD_group.create_dataset(
+                        prop, 
+                        data = galaxy_df[prop].values,
+                        dtype= galaxy_df[prop].dtypes
+                        )
+
         print(f"{simname}-{flag} complete. Duration: {time.time() - t0_flag_total:.2f} sec.")
 
     print(f"{simname} complete. Duration: {time.time() - t0_total:.2f} sec.")
@@ -173,13 +177,17 @@ def make_hdf5_files_c000_phases_parallel(
         stop ,
         parallel=True
         ):
-    phases = np.arange(start,stop)
     return 
+    phases = np.arange(start,stop)
     t000 = time.time()
     if parallel:
         with concurrent.futures.ProcessPoolExecutor() as executor:
-            executor.map(make_hdf5_files_single_version, [0 for i in range(len(phases))], phases)
-        
+            executor.map(make_hdf5_files_single_version, 
+                         [0 for i in range(len(phases))], 
+                         phases,
+                         [False for i in range(len(phases))],
+                         [["test", "val"] for i in range(len(phases))]
+                         )
     else:
         for ph in phases:
             make_hdf5_files_single_version(
@@ -199,20 +207,29 @@ def make_hdf5_files_emulator_versions_parallel(
         stop,
         parallel=True
         ):
-    versions = np.arange(start, stop)
     return 
+    versions = np.arange(start, stop)
     t000 = time.time()
-    if parallel:
-        with concurrent.futures.ProcessPoolExecutor() as executor:
-            executor.map(make_hdf5_files_single_version, [v for v in versions], [0 for v in versions])
+    with concurrent.futures.ProcessPoolExecutor() as executor:
+        executor.map(make_hdf5_files_single_version, 
+                     [v for v in versions], 
+                     [0 for v in versions],
+                     [False for v in versions],
+                     [["train", "test", "val"] for v in versions]
+                     )
     print(f"Total duration: {time.time() - t000:.2f} sec")
 
 def make_hdf5_files_c001_c004_parallel():
-    versions = np.arange(1,5)
     return 
+    versions = np.arange(1,5)
     t000 = time.time()
     with concurrent.futures.ProcessPoolExecutor() as executor:
-        executor.map(make_hdf5_files_single_version, [v for v in versions], [0 for v in versions])
+        executor.map(make_hdf5_files_single_version, 
+                     [v for v in versions], 
+                     [0 for v in versions],
+                     [False for v in versions],
+                     [["test", "val"] for v in versions]
+                     )
     print(f"Total duration: {time.time() - t000:.2f} sec")
 
 def make_hdf5_files_lindergrid_parallel(
@@ -220,36 +237,47 @@ def make_hdf5_files_lindergrid_parallel(
         stop,
         parallel=True
         ):
-    versions = np.arange(start, stop)
     return 
+    versions = np.arange(start, stop)
     t000 = time.time()
-    if parallel:
-        with concurrent.futures.ProcessPoolExecutor() as executor:
-            executor.map(make_hdf5_files_single_version, [v for v in versions], [0 for v in versions])
+    with concurrent.futures.ProcessPoolExecutor() as executor:
+        executor.map(make_hdf5_files_single_version, 
+                     [v for v in versions], 
+                     [0 for v in versions],
+                     [False for v in versions],
+                     [["train", "test", "val"] for v in versions]
+                     )
     print(f"Total duration: {time.time() - t000:.2f} sec")
 
 def make_hdf5_files_c000_all_phases(
         N_parallell=5,
         parallel=True):
+    return 
     for i in range(0, 25, N_parallell):
         make_hdf5_files_c000_phases_parallel(i, i+N_parallell, parallel=parallel)
 
 def make_hdf5_files_all_emulator_versions(
-        N_parallel=4,
+        start,
+        N_parallel=13,
         parallel=True
         ):
-    for i in range(130, 182, N_parallel):
-        make_hdf5_files_emulator_versions_parallel(i, i+N_parallel, parallel=parallel)
+    return 
+    make_hdf5_files_emulator_versions_parallel(start, start+N_parallel, parallel=parallel)
 
         
 def make_hdf5_files_all_lindergrid_versions(
-        N_parallel=3,
+        N_parallel=9,
         parallel=True
         ):
+    return 
     for i in range(100, 126, N_parallel):
         make_hdf5_files_lindergrid_parallel(i, i+N_parallel, parallel=parallel)
 
 # make_hdf5_files_c000_all_phases()
 # make_hdf5_files_c001_c004_parallel()
-# make_hdf5_files_all_emulator_versions(parallel=True)
+# make_hdf5_files_all_emulator_versions(130)
+# make_hdf5_files_all_emulator_versions(143)
+# make_hdf5_files_all_emulator_versions(156)
+# make_hdf5_files_all_emulator_versions(169)
+
 # make_hdf5_files_all_lindergrid_versions(parallel=True)
