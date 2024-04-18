@@ -5,7 +5,7 @@ from smt.sampling_methods import LHS
 from pathlib import Path
 import concurrent.futures
 
-from numdens_HOD import estimate_log10Mmin_from_gal_num_density
+from numdens_HOD import get_log10Mmin_from_varying_log_ng
 
 
 DATAPATH = Path("mn/stornext/d5/data/vetleav/HOD_AbacusData/c000_LCDM_simulation/HOD_parameters")
@@ -18,8 +18,6 @@ def make_csv_files(
         num_train:  int   = 500, 
         num_test:   int   = 100, 
         num_val:    int   = 100, 
-        fix_ng:     bool  = True,
-        ng_desired: float = 2.174e-4, # h^3 Mpc^-3
         version:    int   = 0,
         phase:      int   = 0,
         test:       bool  = False,
@@ -46,14 +44,10 @@ def make_csv_files(
         [log10M1    * 0.9,  log10M1     * 1.1],
         [kappa      * 0.9,  kappa       * 1.1],
         [alpha      * 0.9,  alpha       * 1.1],
+        [-3.7            , -3.2              ],
     ])
 
-    if not fix_ng:
-        # Vary log10Mmin by +/- 10% around fiducial value
-        log10Mmin           = 13.62 # h^-1 Msun
-        log10Mmin_limits    = np.array([log10Mmin * 0.9, log10Mmin * 1.1])
-        param_limits        = np.vstack((log10Mmin_limits, param_limits))
-
+    
     dataset_config_size = {
         'train': num_train,
         'test':  num_test,
@@ -71,10 +65,7 @@ def make_csv_files(
         HOD_PARAMETERS_PATH = Path(f"{D13_EMULATION_PATH}/{simname}/HOD_parameters")
         HOD_PARAMETERS_PATH.mkdir(parents=False, exist_ok=True) # Prevent creation of of files for non-existing simulations
 
-        fname = f"HOD_parameters_{dataset}"
-        if fix_ng:
-            fname += "_ng_fixed" 
-        fname   = Path(f"{fname}.csv")
+        fname   = Path(f"HOD_parameters_{dataset}.csv")
         outfile = Path(HOD_PARAMETERS_PATH / fname)
         if outfile.exists():
             print(f"File {outfile} already exists. Skipping.")
@@ -89,20 +80,19 @@ def make_csv_files(
         # Sample parameters
         samples     = dataset_config_size[dataset]
         node_params = LHC_sampler(samples)
-        if fix_ng:
-            start       = time.time() 
-            log10Mmin   = estimate_log10Mmin_from_gal_num_density(
-                sigma_logM_array    = node_params[:, 0],
-                log10M1_array       = node_params[:, 1],
-                kappa_array         = node_params[:, 2],
-                alpha_array         = node_params[:, 3],
-                ng_desired          = ng_desired,
-                version             = version,
-                phase               = phase,
-                )
+        start       = time.time() 
+        log10Mmin   = get_log10Mmin_from_varying_log_ng(
+            sigma_logM_array    = node_params[:, 0],
+            log10M1_array       = node_params[:, 1],
+            kappa_array         = node_params[:, 2],
+            alpha_array         = node_params[:, 3],
+            log_ng_array        = node_params[:, 4],
+            version             = version,
+            phase               = phase,
+            )
 
-            node_params = np.hstack((log10Mmin[:, np.newaxis], node_params))
-            print(f"Estimating log10Mmin for {simname}/{dataset} dataset took {time.time() - start:.2f} seconds.")
+        node_params = np.hstack((log10Mmin[:, np.newaxis], node_params))
+        print(f"Estimating log10Mmin for {simname}/{dataset} dataset took {time.time() - start:.2f} seconds.")
         # Save parameters to csv file
         df = pd.DataFrame({
             'log10Mmin'     : node_params[:, 0],
@@ -110,6 +100,7 @@ def make_csv_files(
             'log10M1'       : node_params[:, 2],
             'kappa'         : node_params[:, 3],
             'alpha'         : node_params[:, 4],
+            'log_ng'        : node_params[:, 5],
         })
         
         # Save to csv file
