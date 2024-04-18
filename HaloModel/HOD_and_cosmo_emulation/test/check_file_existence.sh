@@ -14,12 +14,12 @@ subdirectories=("HOD_catalogues")
 
 #     # Check if directory exists, otherwise skip
 #     echo $dir
-#     ls -lh $dir
+#     ls -lh $dir/*
 #     echo " " 
 # done
 
 
-for i in {130..181}; do
+for i in {100..126}; do
     # dir="$root_dir/AbacusSummit_base_c${i}_ph000"
     dir="$root_dir/AbacusSummit_base_c${i}_ph000/HOD_catalogues"
     # if [ ! -d $dir ]; then
@@ -27,7 +27,7 @@ for i in {130..181}; do
     # fi
     # Check if directory exists, otherwise skip
     echo $dir
-    ls -lh $dir
+    ls -lh $dir/*
     echo " " 
 done
 
