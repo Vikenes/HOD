@@ -3,7 +3,7 @@ from pathlib import Path
 import h5py 
 
 DATAPATH    = Path(f"/mn/stornext/d5/data/vetleav/HOD_AbacusData/inference_data")
-wp_file     = h5py.File(Path(DATAPATH / "wp_from_sz_small_ng_fixed.hdf5"), "r")
+wp_file     = h5py.File(Path(DATAPATH / "wp_from_sz_small.hdf5"), "r")
 
 rperp_mean  = wp_file["rp_mean"][:]
 N_rperp     = rperp_mean.shape[0]

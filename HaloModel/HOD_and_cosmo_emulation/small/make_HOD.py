@@ -38,96 +38,94 @@ redshift            = 0.25
 boxsize             = 500.0
 
 # Use common fiducial HOD parameters for simulations 
-HOD_PARAMS          = pd.read_csv(f"{D13_EMULATION_PATH}/AbacusSummit_base_c000_ph000/HOD_parameters/HOD_parameters_fiducial_ng_fixed.csv")
-# logM_min            = np.mean(np.load("log10Mmin_small_415.npy"))
+HOD_PARAMS          = pd.read_csv(f"{D13_EMULATION_PATH}/AbacusSummit_base_c000_ph000/HOD_parameters/HOD_parameters_fiducial.csv")
+logM_min_array      = np.load("log10Mmin_small.npy")
 
-# Make galaxy object
-galaxy_fiducial=Galaxy(
-    # logM_min    = logM_min,
-    logM_min    = HOD_PARAMS['log10Mmin'][0],
-    sigma_logM  = HOD_PARAMS['sigma_logM'][0],
-    logM1       = HOD_PARAMS['log10M1'][0],
-    kappa       = HOD_PARAMS['kappa'][0],
-    alpha       = HOD_PARAMS['alpha'][0]
-    )
 
 
 # Make output files for HOD catalogues
 OUTPATH = Path(f"/mn/stornext/d5/data/vetleav/HOD_AbacusData/inference_data")
-outfile = Path(OUTPATH / "halocat_small_ng_fixed.hdf5")
+outfile = Path(OUTPATH / "halocat_small.hdf5")
 if outfile.exists():
     input(f"{outfile} exists. Press enter to overwrite.")
-
-HOD_file = h5py.File(outfile, "w")
 
 HOD_PROPERTIES_TO_SAVE = ["x", "y", "z", "s_z"]
 
 
-# Loop over all 25 phases of c000 
-for phase in range(3000, 5000):
-    t0 = time.time()
-
-    # Create group for each simulation
-    simname          = f"AbacusSummit_small_c000_ph{phase}"
-    sim_path         = Path(D13_DATA_PATH / simname)
-    if not sim_path.is_dir():
-        continue 
-    HOD_group        = HOD_file.create_group(simname)
-                
-    # Load pos, vel and mass of halos with mass > 1e12 h^-1 Msun
-    Halo_arrays_path = Path(sim_path / "pos_vel_mass_arrays")
-    pos  = np.load(f"{Halo_arrays_path}/L1_pos.npy")  # shape: (N_halos, 3)
-    vel  = np.load(f"{Halo_arrays_path}/L1_vel.npy")  # shape: (N_halos, 3)
-    mass = np.load(f"{Halo_arrays_path}/L1_mass.npy") # shape: (N_halos,)
+with h5py.File(outfile, "w") as HOD_file:
 
 
+    # Loop over all 25 phases of c000 
+    phase_range = np.arange(3000, 5000)
+    phase_paths = np.array([Path(D13_DATA_PATH / f"AbacusSummit_small_c000_ph{phase}") for phase in phase_range if Path(D13_DATA_PATH / f"AbacusSummit_small_c000_ph{phase}").is_dir()])
 
-    # Make halo catalogue. 
-    halocat = HaloCatalogue(
-        pos,
-        vel,
-        mass,
-        boxsize         = boxsize,
-        conc_mass_model = hmd.concentration.diemer15,
-        cosmology       = cosmology,
-        redshift        = redshift,
-        )
 
-    # Populate halos with galaxies
-    maker = HODMaker(
-        halo_catalogue      = halocat,
-        central_occ         = Zheng07Centrals(),
-        sat_occ             = Zheng07Sats(),
-        satellite_profile   = FixedCosmologyNFW(
-            cosmology       = halocat.cosmology,
+    for ii, phase_path in enumerate(phase_paths):
+        t0 = time.time()
+
+        # Create group for each simulation
+        # simname          = f"AbacusSummit_small_c000_ph{phase}"
+        simname = phase_path.name
+        HOD_group        = HOD_file.create_group(simname)
+                    
+        # Load pos, vel and mass of halos with mass > 1e12 h^-1 Msun
+        pos  = np.load(phase_path / "pos_vel_mass_arrays/L1_pos.npy")  # shape: (N_halos, 3)
+        vel  = np.load(phase_path / "pos_vel_mass_arrays/L1_vel.npy")  # shape: (N_halos, 3)
+        mass = np.load(phase_path / "pos_vel_mass_arrays/L1_mass.npy") # shape: (N_halos,)
+
+
+
+        # Make halo catalogue. 
+        halocat = HaloCatalogue(
+            pos,
+            vel,
+            mass,
+            boxsize         = boxsize,
+            conc_mass_model = hmd.concentration.diemer15,
+            cosmology       = cosmology,
             redshift        = redshift,
-            mdef            = "200m",
-            conc_mass_model = "dutton_maccio14",
-            sigmaM          = None,
-            ),
-        galaxy=galaxy_fiducial,
-        )
-    maker()
-
-    # Load galaxy catalogue
-    galaxy_df           = maker.galaxy_df
-
-    # Add redshift-space distortions to z-coordinate 
-    galaxy_df["s_z"] = halocat.apply_redshift_distortion(
-        galaxy_df['z'],
-        galaxy_df['v_z'],
-    )
-    
-    galaxy_properties = galaxy_df.columns.values.tolist()
-
-    for prop in HOD_PROPERTIES_TO_SAVE:
-        HOD_group.create_dataset(
-            prop, 
-            data = galaxy_df[prop].values,
-            dtype= galaxy_df[prop].dtypes
             )
-        
-    print(f"phase {phase} complete. Duration: {time.time() - t0:.2f} sec.")
 
-HOD_file.close()
+        # Populate halos with galaxies
+        maker = HODMaker(
+            halo_catalogue      = halocat,
+            central_occ         = Zheng07Centrals(),
+            sat_occ             = Zheng07Sats(),
+            satellite_profile   = FixedCosmologyNFW(
+                cosmology       = halocat.cosmology,
+                redshift        = redshift,
+                mdef            = "200m",
+                conc_mass_model = "dutton_maccio14",
+                sigmaM          = None,
+                ),
+            galaxy=Galaxy(
+            logM_min    = logM_min_array[ii],
+            sigma_logM  = HOD_PARAMS['sigma_logM'][0],
+            logM1       = HOD_PARAMS['log10M1'][0],
+            kappa       = HOD_PARAMS['kappa'][0],
+            alpha       = HOD_PARAMS['alpha'][0],
+            ),
+            )
+        maker()
+
+        # Load galaxy catalogue
+        galaxy_df           = maker.galaxy_df
+
+        # Add redshift-space distortions to z-coordinate 
+        galaxy_df["s_z"] = halocat.apply_redshift_distortion(
+            galaxy_df['z'],
+            galaxy_df['v_z'],
+        )
+        
+        galaxy_properties = galaxy_df.columns.values.tolist()
+
+        for prop in HOD_PROPERTIES_TO_SAVE:
+            HOD_group.create_dataset(
+                prop, 
+                data = galaxy_df[prop].values,
+                dtype= galaxy_df[prop].dtypes
+                )
+            
+        print(f"phase {phase_path.name[-6:]} complete. Duration: {time.time() - t0:.2f} sec.")
+
 
