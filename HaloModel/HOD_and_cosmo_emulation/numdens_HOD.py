@@ -18,8 +18,10 @@ For each parameter set, we estimate log10Mmin that yields ng = ng_desired.
 # Suppress runtime warning from invalid value encountered in power 
 np.seterr(invalid='ignore')
 
-D13_BASE_PATH = "/mn/stornext/d13/euclid_nobackup/halo/AbacusSummit/emulation_files"
-BOX_VOLUME = 2000.0**3
+D13_BASE_PATH    = "/mn/stornext/d13/euclid_nobackup/halo/AbacusSummit/emulation_files"
+BOX_VOLUME       = 2000.0**3
+BOX_VOLUME_SMALL = 500.0**3
+
 
 
 def get_log10Mmin_from_fixed_ng(
@@ -115,7 +117,7 @@ def compute_ng_analytical(log10Mmin, sigma_logM, log10M1, kappa, alpha, mass_cen
 
 
 
-def ng_func(log10Mmin, sigma_logM, log10M1, kappa, alpha, ng_array, mass_center, dn_dM):
+def ng_func_array(log10Mmin, sigma_logM, log10M1, kappa, alpha, ng_array, mass_center, dn_dM):
     """
     Callable func for scipy fsolve to find log10Mmin that yields ng = ng_desired.
     """
@@ -132,6 +134,23 @@ def ng_func(log10Mmin, sigma_logM, log10M1, kappa, alpha, ng_array, mass_center,
   
 
     return simpson(dn_dM[:,np.newaxis] * (Nc + Ns), mass_center, axis=0) - ng_array
+
+
+def ng_func_scalar(log10Mmin, sigma_logM, log10M1, kappa, alpha, ng_desired, mass_center, dn_dM):
+    """
+    Callable func for scipy fsolve to find log10Mmin that yields ng = ng_desired.
+    """
+    ### Compute ng analytically from HOD params and HMF
+    Nc                  = 0.5 * special.erfc(np.log10(10**log10Mmin / mass_center) / sigma_logM)
+    mask                = mass_center > kappa * 10**log10Mmin # No satellite galaxies below Mmin
+
+    # lambda_values = np.zeros_like(mask, dtype=float)
+    lambda_values = np.where(mask, ((mass_center - kappa * 10**log10Mmin) / 10**log10M1)**alpha, 0.0)
+  
+    Ns = Nc * lambda_values
+  
+
+    return simpson(dn_dM * (Nc + Ns), mass_center, axis=0) - ng_desired
 
 
 def get_log10Mmin_from_varying_log_ng(
@@ -174,6 +193,42 @@ def get_log10Mmin_from_varying_log_ng(
     ng_array     = 10**log_ng_array
 
     # Estimate ng from halo catalogue
-    root = fsolve(ng_func, logMmin_init, args=(sigma_logM_array, log10M1_array, kappa_array, alpha_array, ng_array, mass_center, dn_dM))
+    root = fsolve(ng_func_array, logMmin_init, args=(sigma_logM_array, log10M1_array, kappa_array, alpha_array, ng_array, mass_center, dn_dM))
 
     return root 
+
+
+
+def get_log10Mmin_from_fixed_log_ng_small(
+        array_path: Path,
+        params: tuple,
+        ) -> ArrayLike:
+    
+    """
+    Finds the appropriate values of log10Mmin that yield ng = 10**log_ng_array.
+    Computes ng with Eq. (19) in https://doi.org/10.1093/mnras/stad1207
+    """
+
+    sigma_logM, log10M1, kappa, alpha, log_ng = params
+
+    # Halo data 
+    if not array_path.exists():
+        raise FileNotFoundError(f"Error: {array_path} does not exist")
+
+    # Load halo mass array
+    mass = np.load(f"{array_path}/L1_mass.npy") # shape: (N_halos,)
+    
+    # Compute HMF from halo catalogue 
+    N           = 201
+    mass_edges  = np.logspace(np.log10(np.min(mass)), np.log10(np.max(mass)), N)
+    num_halos   = np.histogram(mass, mass_edges)[0]
+    mass_center = 0.5 * (mass_edges[1:] + mass_edges[:-1])
+    dn_dM       = num_halos / BOX_VOLUME_SMALL / (mass_edges[1:] - mass_edges[:-1])
+
+    logMmin_init = 13.0
+    ng_desired   = 10**log_ng
+
+    # Estimate ng from halo catalogue
+    root = fsolve(ng_func_array, logMmin_init, args=(sigma_logM, log10M1, kappa, alpha, ng_desired, mass_center, dn_dM))
+
+    return root[0] 
