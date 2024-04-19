@@ -98,11 +98,10 @@ def make_TPCF_hdf5_files_full(
     For each simulation, creates one group per HOD parameter set (node).
     Stores HOD parameters and TPCF data for each node.
 
-    From the resulting HDF5 file, csv files are created using the functions ***_hdf5_to_csv().
-    The csv files are the data actually used for emulation.
-    Making csv files from the single hdf5 file is very simple.
-    Allows for easier adjustments to the data used for emulation, 
-    e.g. adjusting r-interval, taking logarithms, using xi/xi_fiducial, etc.
+    From the resulting HDF5 file, individual HDF5 files for each flag is created.
+    Allows for easy adjustments of the data to use during emulation, e.g. adjusting r-interval. 
+    The individual hdf5 files for each flag are then used to create csv files, which are used for emulation.
+    Making csv files from the single hdf5 files is very simple.
 
     Also, train/test/val data for all simulations is stored in the same file.
     When making csv files later, only the data from simulations in 'SIMULATION_FLAG_PATHS' 
@@ -542,11 +541,6 @@ def xi_hdf5_to_csv(
     dur_tot = time.time() - t0_total
     print(f"Done with all. Took {dur_tot//60:.0f}min {dur_tot%60:.0f}sec")
 
-
-
-
-
-# make_TPCF_HDF_files_arrays_at_varying_r()
 
 COSMO_PARAMS_CSV = ["wb", "wc", "sigma8", "ns", "alpha_s", "N_eff", "w0", "wa"]
 HOD_PARAMS_CSV   = ["sigma_logM", "alpha", "kappa", "log10M1", "log10_ng"]
