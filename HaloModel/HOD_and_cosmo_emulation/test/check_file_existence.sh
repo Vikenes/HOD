@@ -19,28 +19,37 @@ subdirectories=("HOD_catalogues")
 # done
 
 
-for i in {100..126}; do
-    # dir="$root_dir/AbacusSummit_base_c${i}_ph000"
-    dir="$root_dir/AbacusSummit_base_c${i}_ph000/HOD_catalogues"
-    # if [ ! -d $dir ]; then
-        # continue
-    # fi
-    # Check if directory exists, otherwise skip
-    echo $dir
-    ls -lh $dir/*
-    echo " " 
-done
-
-# for i in {001..181}; do
-#     dir="$root_dir/AbacusSummit_base_c${i}_ph000"
+# for i in {100..126}; do
+#     # dir="$root_dir/AbacusSummit_base_c${i}_ph000"
+#     dir="$root_dir/AbacusSummit_base_c${i}_ph000/HOD_catalogues"
+#     # if [ ! -d $dir ]; then
+#         # continue
+#     # fi
 #     # Check if directory exists, otherwise skip
-#     if [ ! -d $dir ]; then
-#         continue
-#     fi
-#     for subdirectory in ${subdirectories[@]}; do
-#         if [ ! -d $dir/$subdirectory ]; then
-#             continue
-#         fi
-#         mv $dir/$subdirectory $dir/old_$subdirectory
-#     done
+#     echo $dir
+#     ls -lh $dir/*
+#     echo " " 
 # done
+
+# Loop over all directories beginning with AbacusSummit_base_c
+for dir in $root_dir/AbacusSummit_base_c*; do
+    # Check if directory exists, otherwise skip
+    TPCF_dir="$dir/TPCF_data"
+    # Check whether $dir exists, but not $TPCF_dir
+    if [ ! -d $TPCF_dir ]; then
+        echo "WARNING $TPCF_dir does not exist"
+        break
+    fi
+
+
+
+    # Check if directory exists, otherwise skip
+    # echo $dir
+    # ls -lh $dir/*
+    du -sh $TPCF_dir/.
+    # echo " " 
+
+    # Break loop
+    # break
+    # echo " " 
+done
