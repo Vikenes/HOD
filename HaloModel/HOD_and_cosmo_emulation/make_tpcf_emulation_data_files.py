@@ -22,45 +22,61 @@ HOD_PARAM_KEYS          = ["sigma_logM", "alpha", "kappa", "log10M1", "log10_ng"
 
 ### Make lists of simulations containing emulation files 
 
-# Get path to emulation data from a simulation, given version and phase
-def get_version_path_list(
-        version_low:  int  = 0, 
-        version_high: int  = 181,
-        phase:        bool = False,
+
+
+def train_test_val_paths_split(
+        split_by_percent:   int = 0.8,
+        seed:               int = 42,
         ):
-    get_sim_path = lambda version, phase: Path(D13_EMULATION_PATH / f"AbacusSummit_base_c{str(version).zfill(3)}_ph{str(phase).zfill(3)}")
-    if phase:
-        version_list = [get_sim_path(0, ph) for ph in range(25) if get_sim_path(0, ph).is_dir()]
-    else:
-        version_list = [get_sim_path(v, 0) for v in range(version_low, version_high) if get_sim_path(v, 0).is_dir()]
-    return version_list 
-        
+    # Get path to emulation data from a simulation, given version and phase
+    def get_version_path_list(
+            version_low:  int  = 0, 
+            version_high: int  = 181,
+            phase:        bool = False,
+            ):
+        get_sim_path = lambda version, phase: Path(D13_EMULATION_PATH / f"AbacusSummit_base_c{str(version).zfill(3)}_ph{str(phase).zfill(3)}")
+        if phase:
+            version_list = [get_sim_path(0, ph) for ph in range(25) if get_sim_path(0, ph).is_dir()]
+        else:
+            version_list = [get_sim_path(v, 0) for v in range(version_low, version_high) if get_sim_path(v, 0).is_dir()]
+        return version_list 
+            
 
-C000_PATHS              = get_version_path_list(phase=True)
-C001_C004_PATHS         = get_version_path_list(version_low=1, version_high=5, phase=False)
-LIN_DER_GRID_PATHS      = get_version_path_list(version_low=100, version_high=127, phase=False)
-BROAD_EMUL_GRID_PATHS   = get_version_path_list(version_low=130, version_high=182, phase=False)
-# All simulations
-SIMULATION_PATHS        = C000_PATHS + C001_C004_PATHS + LIN_DER_GRID_PATHS + BROAD_EMUL_GRID_PATHS
+    C000_PATHS              = get_version_path_list(phase=True)
+    C001_C004_PATHS         = get_version_path_list(version_low=1, version_high=5, phase=False)
+    LIN_DER_GRID_PATHS      = get_version_path_list(version_low=100, version_high=127, phase=False)
+    BROAD_EMUL_GRID_PATHS   = get_version_path_list(version_low=130, version_high=182, phase=False)
 
-
-def train_test_val_paths_split(seed=1998):
-    # Use Broad_EMUL_GRID_PATHS and a random half of LIN_DER_GRID_PATHS for training
-    # Use other half of LIN_DER_GRID_PATHS for validation
     # Use C000_PATHS and C001_C004_PATHS for testing 
-    np.random.seed(seed)
-    N_LIN_DER                 = len(LIN_DER_GRID_PATHS)
-    LIN_DER_GRID_SHUFFLED     = np.random.permutation(LIN_DER_GRID_PATHS)
-    LIN_DER_GRID_TRAIN_PATHS  = list(np.sort(LIN_DER_GRID_SHUFFLED[:N_LIN_DER // 2]))
-    LIN_DER_GRID_VAL_PATHS    = list(np.sort(LIN_DER_GRID_SHUFFLED[N_LIN_DER // 2:]))
-
-    train_paths = LIN_DER_GRID_TRAIN_PATHS + BROAD_EMUL_GRID_PATHS
-    val_paths   = LIN_DER_GRID_VAL_PATHS
     test_paths  = C000_PATHS + C001_C004_PATHS
+
+    np.random.seed(seed)
+    if split_by_percent is None:
+        # Use Broad_EMUL_GRID_PATHS and a random half of LIN_DER_GRID_PATHS for training
+        # Use other half of LIN_DER_GRID_PATHS for validation
+        N_LIN_DER                 = len(LIN_DER_GRID_PATHS)
+        LIN_DER_GRID_SHUFFLED     = np.random.permutation(LIN_DER_GRID_PATHS)
+        LIN_DER_GRID_TRAIN_PATHS  = list(np.sort(LIN_DER_GRID_SHUFFLED[:N_LIN_DER // 2]))
+        LIN_DER_GRID_VAL_PATHS    = list(np.sort(LIN_DER_GRID_SHUFFLED[N_LIN_DER // 2:]))
+        train_paths = LIN_DER_GRID_TRAIN_PATHS + BROAD_EMUL_GRID_PATHS
+        val_paths   = LIN_DER_GRID_VAL_PATHS
+    else:
+        # Use split_by_percent % of LIN_DER_GRID_PATHS+BROAD_EMUL_GRID_PATHS for training
+        # Use the remaining for validation
+        assert 0 < split_by_percent < 1, "split_by_percent must be a float between 0 and 1"
+
+        TRAIN_VIABLE        = LIN_DER_GRID_PATHS + BROAD_EMUL_GRID_PATHS
+        TRAIN_VIABLE_idx    = np.arange(len(TRAIN_VIABLE))
+        N_TRAIN             = int(len(TRAIN_VIABLE) * split_by_percent)
+        TRAIN_PATHS_idx     = list(np.sort(np.random.choice(TRAIN_VIABLE_idx, N_TRAIN, replace=False)))
+        train_paths         = [TRAIN_VIABLE[i] for i in TRAIN_PATHS_idx]
+        val_paths           = [TRAIN_VIABLE[i] for i in TRAIN_VIABLE_idx if i not in TRAIN_PATHS_idx]        
+
 
     return train_paths, test_paths, val_paths
 
-train_paths, test_paths, val_paths = train_test_val_paths_split()
+
+train_paths, test_paths, val_paths = train_test_val_paths_split(split_by_percent=0.8)
 # Cosmologies to use for training, testing, validation 
 SIMULATION_FLAG_PATHS     = {
     "train":    train_paths,
@@ -111,7 +127,7 @@ def make_TPCF_hdf5_files_full(
         else:
             print("Continuing...")
             print()
-        
+
     # Create output file 
     with h5py.File(OUTFILE, "w") as fff:
         
@@ -127,7 +143,6 @@ def make_TPCF_hdf5_files_full(
             fff_flag = fff.create_group(flag)
 
             # Load data from all simulations
-            # for SIMULATION_PATH in SIMULATION_PATHS:
             for SIMULATION_PATH in SIMULATION_FLAG_PATHS[flag]:
 
                 # Create group for each simulation
@@ -152,6 +167,8 @@ def make_TPCF_hdf5_files_full(
                 TPCF_data   = h5py.File(SIMULATION_PATH / f"TPCF_data/TPCF{filename_suffix}", "r")
                 N_nodes     = len(TPCF_data.keys())
 
+                N_neg_xi = 0
+
                 # Loop over all HOD parameter sets (nodes)
                 for node_idx in range(N_nodes):
                     fff_cosmo_node = fff_cosmo.create_group(f"node{node_idx}")
@@ -166,22 +183,23 @@ def make_TPCF_hdf5_files_full(
 
                     # Remove empty bins, i.e. bins where (r,xi)=(nan,-1) 
                     if np.isnan(r_node).any():
-                        print(f"Removing bin with nan-valued r for {flag}/{SIMULATION_PATH.name} node {node_idx}...")
-                        nan_indices = np.where(np.isnan(r_node))[0]#[-1] + 1 # Get lowest index where r is not nan
+                        nan_indices = np.where(np.isnan(r_node))#[0]#[-1] + 1 # Get lowest index where r is not nan
+                        print(f"r=nan for {flag}/{SIMULATION_PATH.name[-10:]} node {node_idx}. {nan_indices[0][0]}-{nan_indices[0][-1]}")
                         r_node      = np.delete(r_node, nan_indices)
                         xi_node     = np.delete(xi_node, nan_indices)
 
                     # Check for negative values in xi
                     # xi is not allowed to be negative, so remove samples with potential negative values of xi 
                     if (xi_node <= 0).any():
-                        print(f"Removing bin with xi<0 for {flag}/{SIMULATION_PATH.name} node {node_idx}...")
                         xi_neg_indices = np.where(xi_node < 0)
+                        # print(f"xi<0 for {flag}/{SIMULATION_PATH.name[-10:]} node{node_idx}. {xi_neg_indices[0][0]}-{xi_neg_indices[0][-1]}")
                         r_node = np.delete(r_node, xi_neg_indices)
                         xi_node = np.delete(xi_node, xi_neg_indices)
+                        N_neg_xi += 1
 
                     fff_cosmo_node.create_dataset("xi", data=xi_node)
                     fff_cosmo_node.create_dataset("r", data=r_node)
-                
+                print(f"Removed {N_neg_xi} negative xi values for {flag}/{SIMULATION_PATH.name[-10:]}")
                 fff_HOD.close()
 
             dur = time.time() - t0        
@@ -218,13 +236,11 @@ def xi_sliced_hdf5(
     However, the data loaded in "fff_TPCF" has r and xi values with different shapes for each dataset, 
     since it only contains r-values above which there are no nan values.
     """
-    print("GO THROUGH CODE AND CHECK BEFORE RUNNING")
-    return 
-    HDF5_OUTPATH = Path(D5_BASE_PATH) # Path to store csv and hdf5 files
+    HDF5_OUTPATH = Path(D5_BASE_PATH / "sliced_r") # Path to store csv and hdf5 files
 
     ng_suffix     = "_ng_fixed" if ng_fixed else ""
     # Load hdf5 file with TPCF data
-    fff_TPCF     = h5py.File(HDF5_OUTPATH / f"TPCF_full{ng_suffix}.hdf5", 'r')
+    fff_TPCF     = h5py.File(D5_BASE_PATH / f"TPCF_full{ng_suffix}.hdf5", 'r')
     
 
     t0_total = time.time()
@@ -234,7 +250,7 @@ def xi_sliced_hdf5(
         print(f"Making hdf5 files for {flag}...")
         t0              = time.time()
     
-        OUTFILE_HDF5    = Path(HDF5_OUTPATH / f"TPCF_sliced_r_{flag}{ng_suffix}.hdf5") # /.../TPCF_flag_ng_fixed.hdf5
+        OUTFILE_HDF5    = Path(HDF5_OUTPATH / f"TPCF_{flag}{ng_suffix}.hdf5") # /.../TPCF_flag_ng_fixed.hdf5
         if OUTFILE_HDF5.exists():
             print(f"Warning: {OUTFILE_HDF5} already exists.")
             opt = input("Do you want to overwrite it? [y/n] ")
@@ -247,67 +263,66 @@ def xi_sliced_hdf5(
                 print()
 
         fff_TPCF_flag   = fff_TPCF[flag] # Load data for train, test, val
-        # Create output file
-        fff_OUT         = h5py.File(OUTFILE_HDF5, "w") 
+
+        with h5py.File(OUTFILE_HDF5, "w") as fff_OUT:
         
 
-        for SIMULATION_PATH in SIMULATION_FLAG_PATHS[flag]:
+            for SIMULATION_PATH in SIMULATION_FLAG_PATHS[flag]:
 
-            # Load data for each simulation. 
-            fff_TPCF_cosmo      = fff_TPCF_flag[SIMULATION_PATH.name]
-            fff_OUT_cosmo       = fff_OUT.create_group(SIMULATION_PATH.name)
-            print("Storing data from: ", fff_TPCF_cosmo.name)
-            
-            # Setup cosmolical parameters dictionary. 
-            cosmo_params_dict   = {key: fff_TPCF_cosmo.attrs[key] for key in COSMO_PARAMS_CSV}
+                # Load data for each simulation. 
+                fff_TPCF_cosmo      = fff_TPCF_flag[SIMULATION_PATH.name]
+                fff_OUT_cosmo       = fff_OUT.create_group(SIMULATION_PATH.name)
+                print("Storing data from: ", fff_TPCF_cosmo.name)
+                
+                # Setup cosmolical parameters dictionary. 
+                cosmo_params_dict   = {key: fff_TPCF_cosmo.attrs[key] for key in COSMO_PARAMS_CSV}
 
-            for node_idx in range(len(fff_TPCF_cosmo)):
-                # Loop over all HOD parameter sets (nodes) in each simulation.
-                fff_TPCF_cosmo_node = fff_TPCF_cosmo[f"node{node_idx}"]
-                fff_OUT_cosmo_node  = fff_OUT_cosmo.create_group(f"node{node_idx}")
+                for node_idx in range(len(fff_TPCF_cosmo)):
+                    # Loop over all HOD parameter sets (nodes) in each simulation.
+                    fff_TPCF_cosmo_node = fff_TPCF_cosmo[f"node{node_idx}"]
+                    fff_OUT_cosmo_node  = fff_OUT_cosmo.create_group(f"node{node_idx}")
 
-                # Store HOD parameters in dictionary
-                HOD_params_dict = {HOD_param: fff_TPCF_cosmo_node.attrs[HOD_param] for HOD_param in HOD_PARAMS_CSV}
+                    # Store HOD parameters in dictionary
+                    HOD_params_dict = {HOD_param: fff_TPCF_cosmo_node.attrs[HOD_param] for HOD_param in HOD_PARAMS_CSV}
 
-                # Combine dictionaries
-                tot_params_dict = cosmo_params_dict | HOD_params_dict
-                for key, val in tot_params_dict.items():
-                    fff_OUT_cosmo_node.attrs[key] = val
+                    # Combine dictionaries
+                    tot_params_dict = cosmo_params_dict | HOD_params_dict
+                    for key, val in tot_params_dict.items():
+                        fff_OUT_cosmo_node.attrs[key] = val
 
-                # Load TPCF data, apply r-masking  
-                r_data  = fff_TPCF_cosmo_node["r"][...]
-                r_mask  = (r_data > r_min) & (r_data < r_max)
-                r_data  = r_data[r_mask]
+                    # Load TPCF data, apply r-masking  
+                    r_data  = fff_TPCF_cosmo_node["r"][...]
+                    r_mask  = (r_data > r_min) & (r_data < r_max)
+                    r_data  = r_data[r_mask]
 
-                # Load TPCF data 
-                xi_data = fff_TPCF_cosmo_node["xi"][...][r_mask]
+                    # Load TPCF data 
+                    xi_data = fff_TPCF_cosmo_node["xi"][...][r_mask]
 
-                # Check for negative values in xi
-                # Should only be one, in train/AbacusSummit_base_c167_ph000 node 151
-                if (xi_data <= 0).any():
-                    """
-                    If there are negative values in xi,
-                    replace them with the value of the neighbour to the left, except if the zeroth value is negative.
+                    # Check for negative values in xi
+                    # Should only be one, in train/AbacusSummit_base_c167_ph000 node 151
+                    if (xi_data <= 0).any():
+                        """
+                        If there are negative values in xi,
+                        replace them with the value of the neighbour to the left, except if the zeroth value is negative.
 
-                    To prevent errors if scaing emulator data by taking the log of xi 
-                    """
-                    print(f"WARNING! NEGATIVE XI FOUND FOR {flag}/{SIMULATION_PATH.name} node {node_idx}...")
-                    print(f"  {xi_data=}")
-                    print(f"  {np.where(xi_data <= 0)}")
-                    input("Continue?")
-                    # Replace negative TPCF data with neighbour 
-                    xi_neg_indices  = np.where(xi_data < 0)
-                    r_data          = np.delete(r_data, xi_neg_indices)
-                    xi_data         = np.delete(xi_data, xi_neg_indices)
+                        To prevent errors if scaing emulator data by taking the log of xi 
+                        """
+                        print(f"WARNING! NEGATIVE XI FOUND FOR {flag}/{SIMULATION_PATH.name} node {node_idx}...")
+                        print(f"  {xi_data=}")
+                        print(f"  {np.where(xi_data <= 0)}")
+                        input("Continue?")
+                        # Replace negative TPCF data with neighbour 
+                        xi_neg_indices  = np.where(xi_data < 0)
+                        r_data          = np.delete(r_data, xi_neg_indices)
+                        xi_data         = np.delete(xi_data, xi_neg_indices)
 
-                xi_out  = xi_data
-                r_out   = r_data 
+                    xi_out  = xi_data
+                    r_out   = r_data 
 
-                # Store dataset
-                fff_OUT_cosmo_node.create_dataset("xi", data=xi_out)
-                fff_OUT_cosmo_node.create_dataset("r", data=r_out)
+                    # Store dataset
+                    fff_OUT_cosmo_node.create_dataset("xi", data=xi_out)
+                    fff_OUT_cosmo_node.create_dataset("r", data=r_out)
 
-        fff_OUT.close()
         dur = time.time() - t0
         print(f"Done. Took {dur//60:.0f}min {dur%60:.2f}sec")
         print()
@@ -451,11 +466,12 @@ def xi_hdf5_to_csv(
     COSMO_PARAMS can only contain values found in COSMOLOGY_PARAM_KEYS.
     HOD_PARAMS can only contain values found in HOD_PARAM_KEYS.
     """
-
-    CSV_OUTPATH = Path(D5_BASE_PATH) # Path to store csv files
+    if sliced_r:
+        CSV_OUTPATH = Path(D5_BASE_PATH / "sliced_r") # Path to store csv files
+    else:
+        CSV_OUTPATH = Path(D5_BASE_PATH)
 
     ng_suffix    = "_ng_fixed" if ng_fixed else ""
-    sliced_r_suffix = "sliced_r_" if sliced_r else ""
 
     r_key  = "r"        # Name of r-column in csv file
     xi_key = "xi"       # Name of xi-column in csv file
@@ -464,18 +480,27 @@ def xi_hdf5_to_csv(
 
     t0_total = time.time()
     for flag in DATASET_NAMES:
-        outfname_stem = f"TPCF_{sliced_r_suffix}{flag}{ng_suffix}"
+        outfname_stem = f"TPCF_{flag}{ng_suffix}"
         ### Create csv file from hdf5 file 
 
-        print("CHECK THIS")
-        input("input ... ")
         HDF5_INFILE     = Path(CSV_OUTPATH / f"{outfname_stem}.hdf5")
         if not HDF5_INFILE.exists():
             raise FileNotFoundError(f"{HDF5_INFILE.parent.name}/{HDF5_INFILE.name} does not exist. Cannot make csv files.")
         
+        CSV_OUTFILE     = Path(CSV_OUTPATH / f"{outfname_stem}.csv")
+        if CSV_OUTFILE.exists():
+            print(f"Warning: {CSV_OUTFILE} already exists.")
+            opt = input("Do you want to overwrite it? [y/n] ")
+            if opt != "y":
+                print("Aborting...")
+                print()
+                return 
+            else:
+                print("Continuing...")
+                print()
+
         print(f"Making csv files for {flag}...")
         t0              = time.time()
-        CSV_OUTFILE     = Path(CSV_OUTPATH / f"{outfname_stem}.csv")
         fff_TPCF_flag   = h5py.File(HDF5_INFILE, "r") # Data for train, test, val
 
         _out_list = []
@@ -526,9 +551,22 @@ def xi_hdf5_to_csv(
 COSMO_PARAMS_CSV = ["wb", "wc", "sigma8", "ns", "alpha_s", "N_eff", "w0", "wa"]
 HOD_PARAMS_CSV   = ["sigma_logM", "alpha", "kappa", "log10M1", "log10_ng"]
 
-# xi_hdf5(
+# make_TPCF_hdf5_files_full(ng_fixed=False)
+
+# xi_NOT_sliced_hdf5(
 #     COSMO_PARAMS_CSV=COSMO_PARAMS_CSV,
 #     HOD_PARAMS_CSV=HOD_PARAMS_CSV,
+#     ng_fixed=False,
 # )
 
-# xi_hdf5_to_csv()
+# xi_sliced_hdf5(
+#     COSMO_PARAMS_CSV=COSMO_PARAMS_CSV,
+#     HOD_PARAMS_CSV=HOD_PARAMS_CSV,
+#     ng_fixed=False,
+#     r_min=0.6,
+#     r_max=100.0,
+# )
+
+# xi_hdf5_to_csv(
+#     sliced_r=True,
+#     ng_fixed=False,)
