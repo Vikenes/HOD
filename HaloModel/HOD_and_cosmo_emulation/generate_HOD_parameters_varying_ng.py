@@ -8,10 +8,46 @@ import concurrent.futures
 from numdens_HOD import get_log10Mmin_from_varying_log_ng
 
 
-DATAPATH = Path("mn/stornext/d5/data/vetleav/HOD_AbacusData/c000_LCDM_simulation/HOD_parameters")
 D13_BASE_PATH       = "/mn/stornext/d13/euclid_nobackup/halo/AbacusSummit"
 D13_EMULATION_PATH  = f"{D13_BASE_PATH}/emulation_files"
 
+def store_fiducial_HOD_parameters():
+    
+    sigma_logM  = 0.6915 
+    log10M1     = 14.42 # h^-1 Msun
+    kappa       = 0.51 
+    alpha       = 0.9168  
+    log_ng      = -3.45
+
+    log10Mmin = get_log10Mmin_from_varying_log_ng(
+        sigma_logM_array    = np.asarray(sigma_logM),
+        log10M1_array       = np.asarray(log10M1),
+        kappa_array         = np.asarray(kappa),
+        alpha_array         = np.asarray(alpha),
+        log_ng_array        = np.asarray(log_ng),
+        version             = 0,
+        phase               = 0,
+        )[0]
+    
+    df = pd.DataFrame({
+            'log10Mmin'     : [log10Mmin],
+            'sigma_logM'    : [sigma_logM],
+            'log10M1'       : [log10M1],
+            'kappa'         : [kappa],
+            'alpha'         : [alpha],
+            'log10_ng'      : [log_ng],
+        })
+        
+    OUTPATH = Path(f"{D13_EMULATION_PATH}/AbacusSummit_base_c000_ph000/HOD_parameters")
+    outfile = Path(OUTPATH / "HOD_parameters_fiducial.csv")
+    if outfile.exists():
+        raise FileExistsError(f"File {outfile.name} already exists.")
+    
+    # Save to csv file
+    df.to_csv(
+        outfile,
+        index=False
+    )
 
 
 def make_csv_files(
