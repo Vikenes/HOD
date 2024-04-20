@@ -177,7 +177,6 @@ def make_hdf5_files_c000_phases_parallel(
         stop ,
         parallel=True
         ):
-    return 
     phases = np.arange(start,stop)
     t000 = time.time()
     if parallel:
@@ -207,7 +206,6 @@ def make_hdf5_files_emulator_versions_parallel(
         stop,
         parallel=True
         ):
-    return 
     versions = np.arange(start, stop)
     t000 = time.time()
     with concurrent.futures.ProcessPoolExecutor() as executor:
@@ -220,7 +218,6 @@ def make_hdf5_files_emulator_versions_parallel(
     print(f"Total duration: {time.time() - t000:.2f} sec")
 
 def make_hdf5_files_c001_c004_parallel():
-    return 
     versions = np.arange(1,5)
     t000 = time.time()
     with concurrent.futures.ProcessPoolExecutor() as executor:
@@ -237,7 +234,6 @@ def make_hdf5_files_lindergrid_parallel(
         stop,
         parallel=True
         ):
-    return 
     versions = np.arange(start, stop)
     t000 = time.time()
     with concurrent.futures.ProcessPoolExecutor() as executor:
@@ -252,7 +248,7 @@ def make_hdf5_files_lindergrid_parallel(
 def make_hdf5_files_c000_all_phases(
         N_parallell=5,
         parallel=True):
-    return 
+    # return 
     for i in range(0, 25, N_parallell):
         make_hdf5_files_c000_phases_parallel(i, i+N_parallell, parallel=parallel)
 
@@ -261,23 +257,24 @@ def make_hdf5_files_all_emulator_versions(
         N_parallel=13,
         parallel=True
         ):
-    return 
     make_hdf5_files_emulator_versions_parallel(start, start+N_parallel, parallel=parallel)
 
         
 def make_hdf5_files_all_lindergrid_versions(
+        start, 
         N_parallel=9,
         parallel=True
         ):
-    return 
-    for i in range(100, 126, N_parallel):
-        make_hdf5_files_lindergrid_parallel(i, i+N_parallel, parallel=parallel)
+    make_hdf5_files_lindergrid_parallel(start, start+N_parallel, parallel=parallel)
 
-# make_hdf5_files_c000_all_phases()
+# make_hdf5_files_c000_all_phases(N_parallell=25)
 # make_hdf5_files_c001_c004_parallel()
 # make_hdf5_files_all_emulator_versions(130)
 # make_hdf5_files_all_emulator_versions(143)
 # make_hdf5_files_all_emulator_versions(156)
 # make_hdf5_files_all_emulator_versions(169)
 
-# make_hdf5_files_all_lindergrid_versions(parallel=True)
+# make_hdf5_files_all_lindergrid_versions(100)
+# make_hdf5_files_all_lindergrid_versions(109)
+# make_hdf5_files_all_lindergrid_versions(118)
+
