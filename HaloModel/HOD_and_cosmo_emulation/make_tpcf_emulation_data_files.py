@@ -189,8 +189,9 @@ def make_TPCF_hdf5_files_full(
 
                     # Check for negative values in xi
                     # xi is not allowed to be negative, so remove samples with potential negative values of xi 
-                    if (xi_node <= 0).any():
-                        xi_neg_indices = np.where(xi_node < 0)
+                    # Also remove samples with xi<1e-7, since it usually has a very high uncertainty
+                    if (xi_node <= 1e-7).any():
+                        xi_neg_indices = np.where(xi_node < 1e-7)
                         # print(f"xi<0 for {flag}/{SIMULATION_PATH.name[-10:]} node{node_idx}. {xi_neg_indices[0][0]}-{xi_neg_indices[0][-1]}")
                         r_node = np.delete(r_node, xi_neg_indices)
                         xi_node = np.delete(xi_node, xi_neg_indices)
@@ -299,7 +300,7 @@ def xi_sliced_hdf5(
 
                     # Check for negative values in xi
                     # Should only be one, in train/AbacusSummit_base_c167_ph000 node 151
-                    if (xi_data <= 0).any():
+                    if (xi_data <= 1e-7).any():
                         """
                         If there are negative values in xi,
                         replace them with the value of the neighbour to the left, except if the zeroth value is negative.
@@ -308,7 +309,7 @@ def xi_sliced_hdf5(
                         """
                         print(f"WARNING! NEGATIVE XI FOUND FOR {flag}/{SIMULATION_PATH.name} node {node_idx}...")
                         print(f"  {xi_data=}")
-                        print(f"  {np.where(xi_data <= 0)}")
+                        print(f"  {np.where(xi_data <= 1e-7)}")
                         input("Continue?")
                         # Replace negative TPCF data with neighbour 
                         xi_neg_indices  = np.where(xi_data < 0)
@@ -417,7 +418,7 @@ def xi_NOT_sliced_hdf5(
 
                     # Check for negative values in xi
                     # Should only be one, in train/AbacusSummit_base_c167_ph000 node 151
-                    if (xi_data <= 0).any():
+                    if (xi_data <= 1e-7).any():
                         """
                         If there are negative values in xi,
                         replace them with the value of the neighbour to the left, except if the zeroth value is negative.
@@ -426,7 +427,7 @@ def xi_NOT_sliced_hdf5(
                         """
                         print(f"WARNING! NEGATIVE XI FOUND FOR {flag}/{SIMULATION_PATH.name} node {node_idx}...")
                         print(f"  {xi_data=}")
-                        print(f"  {np.where(xi_data <= 0)}")
+                        print(f"  {np.where(xi_data <= 1e-7)}")
                         input("Continue?")
                         # Replace negative TPCF data with neighbour 
                         xi_neg_indices  = np.where(xi_data < 0)
