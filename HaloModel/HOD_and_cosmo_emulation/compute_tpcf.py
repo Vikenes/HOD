@@ -196,6 +196,14 @@ tt = TPCF_ABACUS(
     use_sep_avg=True,
     )
 
+     
+tt2 = TPCF_ABACUS(
+    r_bin_edges=r_bin_edges, 
+    ng_fixed=False,
+    nthreads=64,
+    use_sep_avg=True,
+    )
+
 # tt.save_TPCF_c000_phases(0, 3)
 # tt.save_TPCF_c000_phases(3, 6)
 # tt.save_TPCF_c000_phases(6, 9)
@@ -220,21 +228,5 @@ tt = TPCF_ABACUS(
 # tt.save_TPCF_broad_emulator_grid(130, 135)
 # tt.save_TPCF_broad_emulator_grid(135, 140)
 # tt.save_TPCF_broad_emulator_grid(140, 145)
-# tt.save_TPCF_broad_emulator_grid(145, 147)
-# tt.save_TPCF_broad_emulator_grid(147, 149)
-# tt.save_TPCF_broad_emulator_grid(149, 151)
-# tt.save_TPCF_broad_emulator_grid(151, 153)
-# tt.save_TPCF_broad_emulator_grid(153, 155)
-# tt.save_TPCF_broad_emulator_grid(155, 157)
-# tt.save_TPCF_broad_emulator_grid(157, 159)
-# tt.save_TPCF_broad_emulator_grid(159, 161)
-# tt.save_TPCF_broad_emulator_grid(161, 163)
-# tt.save_TPCF_broad_emulator_grid(163, 165)
-# tt.save_TPCF_broad_emulator_grid(165, 167)
-# tt.save_TPCF_broad_emulator_grid(167, 169)
-# tt.save_TPCF_broad_emulator_grid(169, 171)
-# tt.save_TPCF_broad_emulator_grid(171, 173)
-# tt.save_TPCF_broad_emulator_grid(173, 175)
-# tt.save_TPCF_broad_emulator_grid(175, 177)
-# tt.save_TPCF_broad_emulator_grid(177, 179)
-# tt.save_TPCF_broad_emulator_grid(179, 182)
+
+
