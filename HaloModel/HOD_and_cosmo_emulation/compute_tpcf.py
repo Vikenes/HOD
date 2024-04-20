@@ -93,7 +93,7 @@ class TPCF_ABACUS:
         HOD_CATALOGUE_PATH  = Path(SIM_DATA_PATH / "HOD_catalogues")
         OUTPUT_PATH         = Path(SIM_DATA_PATH / "TPCF_data")
         
-        Path(OUTPUT_PATH).mkdir(parents=False, exist_ok=False)
+        Path(OUTPUT_PATH).mkdir(parents=False, exist_ok=True)
         fname_suffix    = [f"{flag}{self.ng_suffix}" for flag in flags]
         halocat_fnames  = [f"halocat_{suffix}.hdf5" for suffix in fname_suffix]
         TPCF_fnames     = [f"TPCF_{suffix}.hdf5" for suffix in fname_suffix]
@@ -139,130 +139,48 @@ class TPCF_ABACUS:
             fff.close()
             halo_file.close()
         
-    def save_TPCF_all_versions(
-            self,
-            c000_phases:            bool,
-            c001_c004:              bool,
-            linear_derivative_grid: bool,
-            broad_emulator_grid:    bool,
-        ):
-        """
-        With nthreads=128, each TPCF takes roughly 1s to compute. 
-        However, with several hundreds needing to be computed for each version,
-        there is a lot of overhead, and it seems to not activate each node fully before completion. 
-        It might therefore be faster to compute the TPCF's in parallel for N versions 
-        simultaneously, using nthreads=128/N to compute the TPCF's. 
-        However, one should be cautious, to ensure that file writing is done correctly.  
-        """
-        if c000_phases:
-            phases   = np.arange(0, 25)
-            for phase in phases:
-                self.save_TPCF_data_from_HOD_catalogue(
-                    version = 0, 
-                    phase   = phase,
-                    flags   = ["test", "val"])
+
+    def save_TPCF_c000_phases(self, start=0, stop=25):
+        assert start >= 0 and stop <= 25 and start < stop, "Invalid phase range for c000"
+        phases = np.arange(start, stop)
+        for phase in phases:
+            self.save_TPCF_data_from_HOD_catalogue(
+                version = 0, 
+                phase   = phase,
+                flags   = ["test"])
             
-        if c001_c004:
-            versions = np.arange(1, 5)
-            for version in versions:
-                self.save_TPCF_data_from_HOD_catalogue(
-                    version = version, 
-                    phase   = 0,
-                    flags   = ["test", "val"])
-        
-        if linear_derivative_grid:
-            versions = np.arange(100, 127)
-            for version in versions:
-                self.save_TPCF_data_from_HOD_catalogue(
-                    version = version, 
-                    phase   = 0,
-                    flags   = ["train", "test", "val"])
-        
-        if broad_emulator_grid:
-            versions = np.arange(130, 182)
-            for version in versions:
-                self.save_TPCF_data_from_HOD_catalogue(
-                    version = version, 
-                    phase   = 0,
-                    flags   = ["train", "test", "val"])
-                
-    def save_TPCF_linear_derivative_grid(self, start=100, stop=127):
+    def save_TPCF_c001_c004(self, start=1, stop=5):
+        assert start >= 1 and stop <= 5 and start < stop, "Invalid version range for c001-c004" 
         versions = np.arange(start, stop)
         for version in versions:
             self.save_TPCF_data_from_HOD_catalogue(
                 version = version, 
                 phase   = 0,
-                flags   = ["train", "test", "val"])
+                flags   = ["test"])
+
+
+    def save_TPCF_linear_derivative_grid(self, start=100, stop=127):
+        assert start >= 100 and stop <= 127 and start < stop, "Invalid version range for linear derivative grid"
+        versions = np.arange(start, stop)
+        for version in versions:
+            self.save_TPCF_data_from_HOD_catalogue(
+                version = version, 
+                phase   = 0,
+                flags   = ["train", "val"])
 
     def save_TPCF_broad_emulator_grid(self, start=130, stop=182):
+        assert start >= 130 and stop <= 182 and start < stop, "Invalid version range for broad emulator grid"
         versions = np.arange(start, stop)
+        T0 = time.time()
         for version in versions:
             self.save_TPCF_data_from_HOD_catalogue(
                 version = version, 
                 phase   = 0,
-                flags   = ["train", "test", "val"])
+                flags   = ["train", "val"])
+        dur = time.time() - T0
+        print(f"Total time for {start}-{stop}: {dur//60:.0f} min {dur%60:.1f} s")
 
 
-
-def run_c000_parallel(r_bin_edges, nthreads):
-    tt = TPCF_ABACUS(
-        r_bin_edges=r_bin_edges, 
-        ng_fixed=False,
-        nthreads=nthreads,
-        use_sep_avg=True,
-        )
-    phases   = np.arange(0, 25)
-    t000 = time.time()
-    with concurrent.futures.ProcessPoolExecutor() as executor:
-        executor.map(
-            tt.save_TPCF_data_from_HOD_catalogue, 
-            [0 for phase in phases],
-            phases,
-            [["test", "val"] for phase in phases]
-            )
-    print(f"Done with c000. Took {time.time() - t000:.2f} s")
-        
-    
-
-def run_c001_c004_parallel(r_bin_edges, nthreads=32):
-    tt = TPCF_ABACUS(
-        r_bin_edges=r_bin_edges, 
-        ng_fixed=False,
-        nthreads=nthreads,
-        use_sep_avg=True,
-        )
-    versions   = np.arange(1, 5)
-    t000 = time.time()
-    with concurrent.futures.ProcessPoolExecutor() as executor:
-        executor.map(
-            tt.save_TPCF_data_from_HOD_catalogue, 
-            versions,
-            [0 for _ in versions],
-            [["test", "val"] for _ in versions]
-            )
-        
-    print(f"Done with c001-c004. Took {time.time() - t000:.2f} s")
-
-
-def run_lin_der_grid_parallel(r_bin_edges, start, stop, nthreads):
-    tt = TPCF_ABACUS(
-        r_bin_edges=r_bin_edges, 
-        ng_fixed=False,
-        nthreads=nthreads,
-        use_sep_avg=True,
-        )
-    assert start >= 100 and stop <= 127 and start < stop, f"Error: start={start} and stop={stop} not valid for linear derivative grid."
-    versions   = np.arange(start, stop)
-    t000 = time.time()
-    with concurrent.futures.ProcessPoolExecutor() as executor:
-        executor.map(
-            tt.save_TPCF_data_from_HOD_catalogue, 
-            versions,
-            [0 for _ in versions],
-            [["train", "test", "val"] for _ in versions]
-            )
-        
-    print(f"Done with c{start}-c{stop}. Took {time.time() - t000:.2f} s")
 
 # Use same bins as Cuesta-Lazaro et al.
 r_bin_edges = np.concatenate((
@@ -278,24 +196,45 @@ tt = TPCF_ABACUS(
     use_sep_avg=True,
     )
 
+# tt.save_TPCF_c000_phases(0, 3)
+# tt.save_TPCF_c000_phases(3, 6)
+# tt.save_TPCF_c000_phases(6, 9)
+# tt.save_TPCF_c000_phases(9, 12)
+# tt.save_TPCF_c000_phases(12, 15)
+# tt.save_TPCF_c000_phases(15, 20)
+# tt.save_TPCF_c000_phases(20, 25)
 
-# tt.save_TPCF_linear_derivative_grid(108, 127)
-# tt.save_TPCF_broad_emulator_grid(130, 156)
-# tt.save_TPCF_broad_emulator_grid(156, 182)
+# tt.save_TPCF_c001_c004(1, 5)
+
+# tt.save_TPCF_linear_derivative_grid(100, 105)
+# tt.save_TPCF_linear_derivative_grid(105, 110)
+# tt.save_TPCF_linear_derivative_grid(110, 115)
+# tt.save_TPCF_linear_derivative_grid(115, 117)
+# tt.save_TPCF_linear_derivative_grid(117, 119)
+# tt.save_TPCF_linear_derivative_grid(119, 121)
+# tt.save_TPCF_linear_derivative_grid(121, 123)
+# tt.save_TPCF_linear_derivative_grid(123, 125)
+# tt.save_TPCF_linear_derivative_grid(125, 127)
 
 
-# tt.save_TPCF_all_versions(
-#     c000_phases            = False,
-#     c001_c004              = False,
-#     linear_derivative_grid = True,
-#     broad_emulator_grid    = False,
-#     )
-
-
-
-# run_c000_parallel(r_bin_edges)
-# run_c001_c004_parallel(r_bin_edges)
-# run_lin_der_grid_parallel(r_bin_edges, 100, 104, nthreads=32)
-# run_lin_der_grid_parallel(r_bin_edges, 104, 106, nthreads=64)
-# run_lin_der_grid_parallel(r_bin_edges, 104, 108, nthreads=64)
-
+# tt.save_TPCF_broad_emulator_grid(130, 135)
+# tt.save_TPCF_broad_emulator_grid(135, 140)
+# tt.save_TPCF_broad_emulator_grid(140, 145)
+# tt.save_TPCF_broad_emulator_grid(145, 147)
+# tt.save_TPCF_broad_emulator_grid(147, 149)
+# tt.save_TPCF_broad_emulator_grid(149, 151)
+# tt.save_TPCF_broad_emulator_grid(151, 153)
+# tt.save_TPCF_broad_emulator_grid(153, 155)
+# tt.save_TPCF_broad_emulator_grid(155, 157)
+# tt.save_TPCF_broad_emulator_grid(157, 159)
+# tt.save_TPCF_broad_emulator_grid(159, 161)
+# tt.save_TPCF_broad_emulator_grid(161, 163)
+# tt.save_TPCF_broad_emulator_grid(163, 165)
+# tt.save_TPCF_broad_emulator_grid(165, 167)
+# tt.save_TPCF_broad_emulator_grid(167, 169)
+# tt.save_TPCF_broad_emulator_grid(169, 171)
+# tt.save_TPCF_broad_emulator_grid(171, 173)
+# tt.save_TPCF_broad_emulator_grid(173, 175)
+# tt.save_TPCF_broad_emulator_grid(175, 177)
+# tt.save_TPCF_broad_emulator_grid(177, 179)
+# tt.save_TPCF_broad_emulator_grid(179, 182)
