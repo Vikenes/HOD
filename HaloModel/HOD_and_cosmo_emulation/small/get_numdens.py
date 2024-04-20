@@ -17,8 +17,14 @@ def print_logMmin():
     log10Mmin_array = np.load("log10Mmin_small.npy")
     mean = np.mean(log10Mmin_array)
     std  = np.std(log10Mmin_array)
-    print(f"Mean: {mean:.4f} | Std: {std:.5f}")
-    print(f"Min: {np.min(log10Mmin_array):.2f} | Max: {np.max(log10Mmin_array):.2f}")   
+    print(f"Log10Mmin for {len(log10Mmin_array)} AbacusSummit_small_c000_ph*:")
+    print(f"    Mean:    {mean:.4f}")
+    print(f"    Stddev:  {std:.4e}")
+    print(f"    Min:     {np.min(log10Mmin_array):.4f}")   
+    print(f"    Max:     {np.max(log10Mmin_array):.4f}")   
+    print(f"    Max-Min: {np.max(log10Mmin_array)-np.min(log10Mmin_array):.5f}")   
+
+
 
 
 
