@@ -13,7 +13,6 @@ HOD_FILE    = Path(OUTPATH / "halocat_small.hdf5")
 if not HOD_FILE.exists():
     raise FileNotFoundError(f"{HOD_FILE} does not exist. Run make_HOD.py first")
 
-
 def compute_wp_of_s_z_from_HOD_catalogue(
         r_binedge:  np.ndarray,
         threads:    int         = 128,
@@ -90,7 +89,10 @@ def compute_tpcf_from_HOD_catalogue(
         ):
     
     # Create outfile for tpcf
-    outfile = Path(OUTPATH / "tpcf_r_small.hdf5")
+    if use_r_mask:
+        outfile = Path(OUTPATH / "tpcf_r_small_sliced_r.hdf5")
+    else:
+        outfile = Path(OUTPATH / "tpcf_r_small.hdf5")
     if outfile.exists():
         input(f"{outfile} exists. Press enter to overwrite.")
     print(f"Computing TPCF for {outfile}")
@@ -104,9 +106,9 @@ def compute_tpcf_from_HOD_catalogue(
     tpcf_lst = []
     r_lst = []
 
-    for key in HOD_catalogue.keys():
+    N_neg_xi = 0
 
-        t0          = time.time()
+    for ii, key in enumerate(HOD_catalogue.keys()):
         HOD_group   = HOD_catalogue[key]
 
         X           = np.array(HOD_group['x'][:])
@@ -129,38 +131,57 @@ def compute_tpcf_from_HOD_catalogue(
             r       = r[r_mask]
             xi      = xi[r_mask]
 
-        
-        # Save wp to file
-        tpcf_group = tpcf_file.create_group(key)
-        tpcf_group.create_dataset("r", data=r)
-        tpcf_group.create_dataset("xi",data=xi)
+        if (xi <= 0).any():
+            xi_neg_indices = np.where(xi < 0)
+            # Set r and xi to nan where xi is negative
+            r_hdf5 = np.delete(r, xi_neg_indices)
+            xi_hdf5 = np.delete(xi, xi_neg_indices)
 
-        # Store wp for mean and std, and rp for mean
+            r[xi_neg_indices]  = np.nan
+            xi[xi_neg_indices] = np.nan
+            # Append to lists. Can ignore nan values with nanmean and nanstd  
+            # r_lst.append(r)
+            # tpcf_lst.append(xi)
+            # Delete negative xi values from r and xi before storing in hdf5
+            N_neg_xi += 1
+        else:
+            # Append to lists
+            r_hdf5 = r
+            xi_hdf5 = xi
+
         r_lst.append(r)
         tpcf_lst.append(xi)
 
-        print(f"Done with {key}. Took {time.time() - t0:.2f} s")
+        # Save wp to file
+        tpcf_group = tpcf_file.create_group(key)
+        tpcf_group.create_dataset("r", data=r_hdf5)
+        tpcf_group.create_dataset("xi",data=xi_hdf5)
+
+
+        if ii % 50 == 0:
+            print(f"{key[-6:]} completed, {N_neg_xi=}")
     
     # Compute mean and std of wp 
     tpcf_all      = np.array(tpcf_lst)
-    tpcf_mean     = np.mean(tpcf_all, axis=0)
-    tpcf_stddev   = np.std(tpcf_all, axis=0)
+    tpcf_mean     = np.nanmean(tpcf_all, axis=0)
+    tpcf_stddev   = np.nanstd(tpcf_all, axis=0)
     tpcf_file.create_dataset("xi_mean",   data=tpcf_mean)
     tpcf_file.create_dataset("xi_stddev", data=tpcf_stddev)
 
     # Compute mean of rperp
-    r_mean = np.mean(np.array(r_lst), axis=0)
+    r_mean = np.nanmean(np.array(r_lst), axis=0)
     tpcf_file.create_dataset("r_mean", data=r_mean)
 
     tpcf_file.close()
     HOD_catalogue.close()
+    print(f"Done with {outfile}. {N_neg_xi=}")
 
 
-compute_wp_of_s_z_from_HOD_catalogue(r_binedge = np.geomspace(0.5, 40, 40))
+# compute_wp_of_s_z_from_HOD_catalogue(r_binedge = np.geomspace(0.5, 40, 40))
 
 r_bin_edges = np.concatenate((
     np.logspace(np.log10(0.01), np.log10(5), 40, endpoint=False),
     np.linspace(5.0, 150.0, 75)
     ))
 
-compute_tpcf_from_HOD_catalogue(r_binedge = r_bin_edges, use_r_mask=True)
+compute_tpcf_from_HOD_catalogue(r_binedge = r_bin_edges, use_r_mask=False)
