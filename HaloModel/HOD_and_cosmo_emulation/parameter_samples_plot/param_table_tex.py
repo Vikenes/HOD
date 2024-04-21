@@ -285,7 +285,10 @@ def make_latex_table_wide(
         label                = HOD_param_labels[name]
         min_prior, max_prior = HOD_prior_range[name]
         fiducial_val         = f"{fiducial_HOD_params[name]:.3f}"
-        prior_range          = f"[{min_prior:.3f}, {max_prior:.3f}]"
+        if name == "log10_ng":
+            prior_range          = f"[{min_prior:.1f}, {max_prior:.1f}]"
+        else:
+            prior_range          = f"[{min_prior:.3f}, {max_prior:.3f}]"
         # min_prior            = f"{min_prior:.3f}"
         # max_prior            = f"{max_prior:.3f}"
         table_rows.append([first_col, label, fiducial_val, prior_range])
@@ -313,6 +316,8 @@ def make_latex_table_wide(
     df = pd.DataFrame(table_rows, columns=table_header)
     caption = "HOD and cosmological parameters and their prior ranges."
     label = "tab:HOD_and_cosmo_params"
+    if ng_fixed:
+        label += "_ng_fixed"
 
     # Save to latex table
     outfname = "param_priors_ng_fixed.tex" if ng_fixed else "param_priors.tex"
@@ -328,7 +333,7 @@ def make_latex_table_wide(
         index=False, 
         escape=False,
         buf=outfile,
-        position="h",
+        position="ht",
         column_format=" X X X rX ",
         caption=caption,
         label=label,)
