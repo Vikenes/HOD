@@ -12,14 +12,14 @@ Creates latex table of HOD and cosmological parameters and their prior ranges.
 """
 D13_PATH        = Path("/mn/stornext/d13/euclid_nobackup/halo/AbacusSummit/emulation_files/")
 BASEPATH        = Path("/mn/stornext/d5/data/vetleav/emulation_data/TPCF_HOD_and_cosmo")
-EMULPATH        = Path(BASEPATH / "vary_r")
+EMULPATH        = Path(BASEPATH)
 DATASET_NAMES   = ["train", "test", "val"]
 
 # HOD parameters used in the emulation
-HOD_PARAM_NAMES = ["log10Mmin", "log10M1", "sigma_logM", "kappa", "alpha"]
+HOD_PARAM_NAMES = ["log10M1", "sigma_logM", "kappa", "alpha", "log10_ng"]
 
 # get the cosmological parameter names from one of the datasets 
-with h5py.File(EMULPATH / f"TPCF_test_ng_fixed.hdf5", "r") as f:
+with h5py.File(EMULPATH / f"TPCF_test.hdf5", "r") as f:
     """
     COSMO_PARAM_NAMES is used to retrieve the prior range of each parameter
     and to make the latex label of each parameter.  
@@ -44,7 +44,7 @@ def get_cosmo_params_prior_range():
     
     for flag in DATASET_NAMES:
         # Get parameters from train/test/val datasets
-        fff             = h5py.File(EMULPATH / f"TPCF_{flag}_ng_fixed.hdf5", "r")
+        fff             = h5py.File(EMULPATH / f"TPCF_{flag}.hdf5", "r")
         N_sims          = len([fff[simulation] for simulation in fff.keys() if simulation.startswith("AbacusSummit")])
 
         # Array to fill with all cosmological parameters from one dataset
@@ -72,57 +72,32 @@ def get_cosmo_params_prior_range():
 
     return cosmo_param_limits
 
-def get_fiducial_params():
-        FIDUCIAL_HOD_params     = pd.read_csv(f"{D13_PATH}/fiducial_data/HOD_parameters_fiducial_ng_fixed.csv")
-        FIDUCIAL_cosmo_params   = pd.read_csv(f"{D13_PATH}/fiducial_data/cosmological_parameters.dat", sep=" ")
-        FIDUCIAL_params         = pd.concat([FIDUCIAL_HOD_params, FIDUCIAL_cosmo_params], axis=1)
-        FIDUCIAL_params         = FIDUCIAL_params.iloc[0].to_dict()
-        
-        # Fiducial_params = [FIDUCIAL_params[param] for param in self.emulator_param_names]
-        # print(Fiducial_params)
-        return FIDUCIAL_params
+def get_fiducial_HOD_params():
+        """
+        FIX FIDUCIAL HOD PARAMETERS ETC.
+        MAKE FIDUCIAL HOD CATALOGUES
+        """
+        log10M1     = 14.42 # h^-1 Msun
+        sigma_logM  = 0.6915 
+        kappa       = 0.51 
+        alpha       = 0.9168  
+        log10_ng    = -3.45 # h^3 Mpc^-3
+        # FIDUCIAL_HOD_params     = pd.read_csv(f"{D13_PATH}/fiducial_data/HOD_parameters_fiducial.csv")
+        FIDUCIAL_HOD_params = {
+            "log10M1"    : log10M1,
+            "sigma_logM" : sigma_logM,
+            "kappa"      : kappa,
+            "alpha"      : alpha,
+            "log10_ng"   : -3.45,
+        }
+        # return FIDUCIAL_HOD_params.iloc[0].to_dict()
+        return FIDUCIAL_HOD_params
+
 
 def get_fiducial_cosmo_params():
-    """
-    Retrieve all cosmological parameters from all simulations.
-    Finds the minimum and maximum value of each parameter.
+        FIDUCIAL_cosmo_params   = pd.read_csv(f"{D13_PATH}/fiducial_data/cosmological_parameters.dat", sep=" ")
+        return FIDUCIAL_cosmo_params.iloc[0].to_dict()
 
-    Returns a dictionary, with COSMO_PARAM_NAMES as keys
-    where each value is a list of [min, max] of the parameter.
-    """
-
-    # List to fill with all cosmological parameters 
-    cosmo_params_all = []
-    
-    for flag in DATASET_NAMES:
-        # Get parameters from train/test/val datasets
-        fff             = h5py.File(EMULPATH / f"TPCF_{flag}_ng_fixed.hdf5", "r")
-        N_sims          = len([fff[simulation] for simulation in fff.keys() if simulation.startswith("AbacusSummit")])
-
-        # Array to fill with all cosmological parameters from one dataset
-        cosmo_params    = np.zeros((N_sims, len(COSMO_PARAM_NAMES)))
-
-        for ii, simulation in enumerate(fff.keys()):
-            if not simulation.startswith("AbacusSummit"):
-                # r and xi_fiducial are datasets in fff, but don't contain any cosmological parameters
-                continue
-
-            # Same cosmological parameters for all nodes in one simulation, use node0
-            fff_cosmo_node = fff[simulation]["node0"] 
-            for jj, param in enumerate(COSMO_PARAM_NAMES):
-                # Store each parameter in array
-                cosmo_params[ii,jj] = fff_cosmo_node.attrs[param]
-        cosmo_params_all.append(cosmo_params)
-
-    # Stack all cosmological parameters from all datasets
-    cosmo_params_all    = np.vstack(cosmo_params_all).T
-
-    # Create dictionary with prior range of each parameter    
-    cosmo_param_limits = {
-        param: [np.min(cosmo_params_all[i]), np.max(cosmo_params_all[i])] for i, param in enumerate(COSMO_PARAM_NAMES)
-    }
-
-    return cosmo_param_limits
 
 def get_HOD_params_prior_range():
     """
@@ -135,28 +110,19 @@ def get_HOD_params_prior_range():
     Returns a dictionary with HOD_PARAM_NAMES as keys
     where each value is a list of [min, max] of the parameter.
     """
-    log10M1     = 14.42 # h^-1 Msun
-    sigma_logM  = 0.6915 
-    kappa       = 0.51 
-    alpha       = 0.9168  
-    
-
-    log10Mmin_all   = []
-    for flag in DATASET_NAMES:
-        # Load all log10Mmin values from train/test/val datasets
-        df = pd.read_csv(f"./HOD_params_{flag}.csv")
-        log10Mmin_all.append(df["log10Mmin"].values)        
-
-    # Stack all log10Mmin values from all datasets
-    log10Mmin   = np.hstack(log10Mmin_all)
+    fiducial_HOD_params = get_fiducial_HOD_params()
+    log10M1     = fiducial_HOD_params["log10M1"]
+    sigma_logM  = fiducial_HOD_params["sigma_logM"]
+    kappa       = fiducial_HOD_params["kappa"]
+    alpha       = fiducial_HOD_params["alpha"]
 
     # Create dictionary with prior range of each parameter
     HOD_param_limits = {
-        "log10Mmin"  : [np.min(log10Mmin), np.max(log10Mmin)],
         "log10M1"    : [log10M1     * 0.9, log10M1     * 1.1],
         "sigma_logM" : [sigma_logM  * 0.9, sigma_logM  * 1.1],
         "kappa"      : [kappa       * 0.9, kappa       * 1.1],
         "alpha"      : [alpha       * 0.9, alpha       * 1.1],
+        "log10_ng"   : [-3.7             ,              -3.2],
     }
     
     return HOD_param_limits
@@ -164,7 +130,8 @@ def get_HOD_params_prior_range():
 
 def make_latex_table(
         # outpath="/uio/hume/student-u74/vetleav/Documents/thesis/ProjectedCorrelationFunctionArticle/tables"
-        outpath = "/uio/hume/student-u74/vetleav/Documents/thesis/Masterthesis/masterthesis/tables"
+        ng_fixed = False,
+        outpath = "/uio/hume/student-u74/vetleav/Documents/thesis/Masterthesis/masterthesis/tables",
         ):
     
     """
@@ -237,7 +204,8 @@ def make_latex_table(
     label = "tab:HOD_and_cosmo_params"
 
     # Save to latex table
-    outfile = Path(f"{outpath}/param_priors.tex")
+    outfname = "param_priors_ng_fixed.tex" if ng_fixed else "param_priors.tex"
+    outfile = Path(f"{outpath}/{outfname}")
 
     # Check if outfile already exists, if so, ask if it should be overwritten
     if outfile.exists():
@@ -256,8 +224,9 @@ def make_latex_table(
 
 
 def make_latex_table_wide(
-        # outpath="/uio/hume/student-u74/vetleav/Documents/thesis/ProjectedCorrelationFunctionArticle/tables"
-        outpath = "/uio/hume/student-u74/vetleav/Documents/thesis/Masterthesis/masterthesis/tables"
+        ng_fixed = False,
+        outpath = "/uio/hume/student-u74/vetleav/Documents/thesis/Masterthesis/masterthesis/tables",
+        # outpath="/uio/hume/student-u74/vetleav/Documents/thesis/ProjectedCorrelationFunctionArticle/tables",
         ):
     
     """
@@ -285,11 +254,11 @@ def make_latex_table_wide(
 
     # Latex labels of HOD and cosmological parameters
     HOD_param_labels = {
-        "log10Mmin"     : r"$\log M_\mathrm{min}$",
         "log10M1"       : r"$\log M_1$",
         "sigma_logM"    : r"$\sigma_{\log M}$",
         "kappa"         : r"$\kappa$",
         "alpha"         : r"$\alpha$",
+        "log10_ng"      : r"$\log_{10}{\bar{n}_g/(h^3\,\mathrm{Mpc}^{-3})}$"
     }
     cosmo_param_labels = {
         "N_eff"     : r"$N_\mathrm{eff}$",
@@ -303,9 +272,10 @@ def make_latex_table_wide(
     }
 
     # Load prior range dicts of HOD and cosmo params 
-    HOD_prior_range     = get_HOD_params_prior_range()
-    cosmo_prior_range   = get_cosmo_params_prior_range()
-    fiducial_params     = get_fiducial_params()
+    HOD_prior_range         = get_HOD_params_prior_range()
+    cosmo_prior_range       = get_cosmo_params_prior_range()
+    fiducial_cosmo_params   = get_fiducial_cosmo_params()
+    fiducial_HOD_params     = get_fiducial_HOD_params()
 
 
     # Fill table_rows with HOD parameters
@@ -314,12 +284,7 @@ def make_latex_table_wide(
         first_col            = "HOD" if name == HOD_PARAM_NAMES[0] else "" # Add "HOD" to the first row
         label                = HOD_param_labels[name]
         min_prior, max_prior = HOD_prior_range[name]
-        if fiducial_params[name] == 0:
-            fiducial_val = "0.0"
-        elif fiducial_params[name] == -1:
-            fiducial_val = "-1.0"
-        else:
-            fiducial_val = f"{fiducial_params[name]:.3f}"
+        fiducial_val         = f"{fiducial_HOD_params[name]:.3f}"
         prior_range          = f"[{min_prior:.3f}, {max_prior:.3f}]"
         # min_prior            = f"{min_prior:.3f}"
         # max_prior            = f"{max_prior:.3f}"
@@ -330,12 +295,12 @@ def make_latex_table_wide(
         first_col            = r"\hline Cosmology" if name == COSMO_PARAM_NAMES[0] else "" # Add \hline before "Cosmology" to first row
         label                = cosmo_param_labels[name]
         min_prior, max_prior = cosmo_prior_range[name]
-        if fiducial_params[name] == 0:
+        if fiducial_cosmo_params[name] == 0:
             fiducial_val = "0.0"
-        elif fiducial_params[name] == -1:
+        elif fiducial_cosmo_params[name] == -1:
             fiducial_val = "-1.0"
         else:
-            fiducial_val = f"{fiducial_params[name]:.3f}"
+            fiducial_val = f"{fiducial_cosmo_params[name]:.3f}"
         prior_range          = f"[{min_prior:.3f}, {max_prior:.3f}]"
         # min_prior            = f"{min_prior:.3f}"
         # max_prior            = f"{max_prior:.3f}"
@@ -350,7 +315,8 @@ def make_latex_table_wide(
     label = "tab:HOD_and_cosmo_params"
 
     # Save to latex table
-    outfile = Path(f"{outpath}/param_priors.tex")
+    outfname = "param_priors_ng_fixed.tex" if ng_fixed else "param_priors.tex"
+    outfile = Path(f"{outpath}/{outfname}")
 
     # Check if outfile already exists, if so, ask if it should be overwritten
     if outfile.exists():
@@ -369,7 +335,7 @@ def make_latex_table_wide(
 
 def make_priors_config_file():
 
-    hod = get_HOD_params_prior_range()
+    hod   = get_HOD_params_prior_range()
     cosmo = get_cosmo_params_prior_range()
 
     # Change dictionary entries to dtype list(float, float)
