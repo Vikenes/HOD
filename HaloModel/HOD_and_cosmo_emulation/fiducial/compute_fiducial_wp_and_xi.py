@@ -159,10 +159,10 @@ def compute_tpcf_from_HOD_catalogue(
     HOD_catalogue.close()
 
 
-compute_wp_of_s_z_from_HOD_catalogue(r_binedge = np.geomspace(0.5, 40, 40))
+# compute_wp_of_s_z_from_HOD_catalogue(r_binedge = np.geomspace(0.5, 40, 40))
 
 r_bin_edges = np.concatenate((
     np.logspace(np.log10(0.01), np.log10(5), 40, endpoint=False),
     np.linspace(5.0, 150.0, 75)
     ))
-compute_tpcf_from_HOD_catalogue(r_binedge = r_bin_edges, use_r_mask=True)
+# compute_tpcf_from_HOD_catalogue(r_binedge = r_bin_edges, use_r_mask=True)
