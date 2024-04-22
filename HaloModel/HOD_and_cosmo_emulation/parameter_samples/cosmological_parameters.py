@@ -27,6 +27,13 @@ params = {'xtick.top': True,
           }
 plt.rcParams.update(params)
 
+"""
+Make a triangle plot of cosmological parameters
+Shows samples used for training, testing and validation data sets.
+"""
+
+
+
 D13_BASE_PATH       = Path("/mn/stornext/d13/euclid_nobackup/halo/AbacusSummit")
 D13_EMULATION_PATH  = Path(D13_BASE_PATH / "emulation_files")
 # COSMOLOGY_PARAM_KEYS    = ["wb", "wc", "Ol", "ln1e10As", "ns", "alpha_s", "w", "w0", "wa", "sigma8", "Om", "h", "N_eff"]
