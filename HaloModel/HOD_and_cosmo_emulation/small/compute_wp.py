@@ -82,10 +82,11 @@ def compute_wp_of_s_z_from_HOD_catalogue(
 
 def compute_tpcf_from_HOD_catalogue(
         r_binedge:  np.ndarray,
-        r_min:      float       = 0.6,
-        r_max:      float       = 100.0,
+        r_min:      float       = 0.1,
+        r_max:      float       = 105.0,
         use_r_mask: bool        = True,
         threads:    int         = 128,
+        xi_tol:     float       = 1e-7,
         ):
     
     # Create outfile for tpcf
@@ -131,8 +132,8 @@ def compute_tpcf_from_HOD_catalogue(
             r       = r[r_mask]
             xi      = xi[r_mask]
 
-        if (xi <= 0).any():
-            xi_neg_indices = np.where(xi < 0)
+        if (xi <= xi_tol).any():
+            xi_neg_indices = np.where(xi < xi_tol)
             # Set r and xi to nan where xi is negative
             r_hdf5 = np.delete(r, xi_neg_indices)
             xi_hdf5 = np.delete(xi, xi_neg_indices)
@@ -183,5 +184,5 @@ r_bin_edges = np.concatenate((
     np.logspace(np.log10(0.01), np.log10(5), 40, endpoint=False),
     np.linspace(5.0, 150.0, 75)
     ))
-
-compute_tpcf_from_HOD_catalogue(r_binedge = r_bin_edges, use_r_mask=False)
+# compute_tpcf_from_HOD_catalogue(r_binedge = r_bin_edges, use_r_mask=False)
+# compute_tpcf_from_HOD_catalogue(r_binedge = r_bin_edges, use_r_mask=True)
