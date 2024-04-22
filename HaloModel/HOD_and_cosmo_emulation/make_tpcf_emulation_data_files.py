@@ -549,22 +549,23 @@ def xi_hdf5_to_csv(
 COSMO_PARAMS_CSV = ["wb", "wc", "sigma8", "ns", "alpha_s", "N_eff", "w0", "wa"]
 HOD_PARAMS_CSV   = ["sigma_logM", "alpha", "kappa", "log10M1", "log10_ng"]
 
-# make_TPCF_hdf5_files_full(ng_fixed=False)
+if __name__ == "__main__":
+    # make_TPCF_hdf5_files_full(ng_fixed=False)
 
-# xi_NOT_sliced_hdf5(
-#     COSMO_PARAMS_CSV=COSMO_PARAMS_CSV,
-#     HOD_PARAMS_CSV=HOD_PARAMS_CSV,
-#     ng_fixed=False,
-# )
+    # xi_NOT_sliced_hdf5(
+    #     COSMO_PARAMS_CSV=COSMO_PARAMS_CSV,
+    #     HOD_PARAMS_CSV=HOD_PARAMS_CSV,
+    #     ng_fixed=False,
+    # )
 
-xi_sliced_hdf5(
-    COSMO_PARAMS_CSV=COSMO_PARAMS_CSV,
-    HOD_PARAMS_CSV=HOD_PARAMS_CSV,
-    ng_fixed=False,
-    r_min=0.1,
-    r_max=105.0,
-)
+    xi_sliced_hdf5(
+        COSMO_PARAMS_CSV=COSMO_PARAMS_CSV,
+        HOD_PARAMS_CSV=HOD_PARAMS_CSV,
+        ng_fixed=False,
+        r_min=0.1,
+        r_max=105.0,
+    )
 
-xi_hdf5_to_csv(
-    sliced_r=True,
-    ng_fixed=False,)
+    xi_hdf5_to_csv(
+        sliced_r=True,
+        ng_fixed=False,)

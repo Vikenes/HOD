@@ -100,11 +100,6 @@ labels = ["Training", "Test", "Validation", "Fiducial"]
 zorders = [1, 2, 3, 100]
 lines = []
 for data_idx, key in enumerate(cosmo_params_dict.keys()):
-    if key != "train" and key != "fiducial":
-        
-        continue
-    else: 
-        set_lim = True
     df = cosmo_params_dict[key]
 
     for ii in range(gridsize):
@@ -133,9 +128,9 @@ for data_idx, key in enumerate(cosmo_params_dict.keys()):
                 ax.yaxis.set_major_locator(plt.MaxNLocator(4))
             else:
                 ax.set_yticklabels([])
-            if set_lim:
-                ax.set_xlim(param_limits[jj])
-                ax.set_ylim(param_limits[ii])
+            # if set_lim:
+            #     ax.set_xlim(param_limits[jj])
+            #     ax.set_ylim(param_limits[ii])
 
     line, = plt.plot([], [], lw=0, marker=markers[data_idx], markersize=2*ms[data_idx], color=colors[data_idx], label=labels[data_idx])
     lines.append(line)
@@ -144,11 +139,11 @@ fig.legend(handles=lines, bbox_to_anchor=(0.8, 0.8), loc="upper right", ncol=1, 
 
 fig.tight_layout()
 
-plt.show()
+# plt.show()
 
-# plt.savefig(
-#     f"./plots/cosmo_params.png",
-#     bbox_inches="tight",
-#     pad_inches=0.05,
-#     dpi=200,
-# )
+plt.savefig(
+    f"./plots/cosmo_params.png",
+    bbox_inches="tight",
+    pad_inches=0.05,
+    dpi=200,
+)
