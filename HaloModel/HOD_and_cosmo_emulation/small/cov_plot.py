@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 from matplotlib.colors import LogNorm 
 from matplotlib import gridspec
 
+OLD_DATAPATH     = Path(f"/mn/stornext/d5/data/vetleav/HOD_AbacusData/OLD_inference_data")
 DATAPATH     = Path(f"/mn/stornext/d5/data/vetleav/HOD_AbacusData/inference_data")
 
 
@@ -79,8 +80,8 @@ def plot_corr(corr):
         # fig.clf()
         plt.close(fig)
 
-def compare_cov_sz_and_cov_GLAM(cov_NEW, cov_GLAM):
-    cov_inv_GLAM = get_cov_inv(cov_GLAM) # GLAM
+def compare_cov_sz_and_cov_OLD(cov_NEW, cov_OLD):
+    cov_inv_OLD = get_cov_inv(cov_OLD) # OLD
     cov_inv_NEW = get_cov_inv(cov_NEW) # SZ
 
     fig = plt.figure(figsize=(10, 10))
@@ -91,15 +92,15 @@ def compare_cov_sz_and_cov_GLAM(cov_NEW, cov_GLAM):
     ax3 = plt.subplot(gs[3])
 
     ax0.set_title("Covariance Abacus small")
-    ax1.set_title("Covariance GLAM")
+    ax1.set_title("Covariance OLD")
     ax2.set_title("Inverse covariance Abacus small")
-    ax3.set_title("Inverse covariance GLAM")
+    ax3.set_title("Inverse covariance OLD")
 
-    # im0 = ax0.imshow(np.log(cov_GLAM), origin="lower", cmap='bwr', interpolation="none")
+    # im0 = ax0.imshow(np.log(cov_OLD), origin="lower", cmap='bwr', interpolation="none")
     im0 = ax0.imshow(cov_NEW, origin="lower", norm=LogNorm())
-    im1 = ax1.imshow(cov_GLAM, origin="lower", norm=LogNorm())
+    im1 = ax1.imshow(cov_OLD, origin="lower", norm=LogNorm())
     im2 = ax2.imshow(cov_inv_NEW, origin="lower")
-    im3 = ax3.imshow(cov_inv_GLAM, origin="lower",)
+    im3 = ax3.imshow(cov_inv_OLD, origin="lower",)
     
 
     fig.colorbar(im0, fraction=0.046, pad=0.04)
@@ -121,30 +122,26 @@ def compare_cov_sz_and_cov_GLAM(cov_NEW, cov_GLAM):
         plt.close(fig)
 
 
-def check_cov(cov):
+def check_cov(cov, name):
     cond = np.linalg.cond(cov)
-    eigenvalues, _ = np.linalg.eig(cov)
-    print(f"{eigenvalues=}")
-    print(f"Condition number: {cond}")
+    print(f"Condition number for {name}: {cond}")
     print()
 
-# cov_GLAM, corr_GLAM     = np.load(f'{DATAPATH}/MGGLAM/cov_wp_fiducial.npy')
-cov_GLAM, corr_GLAM = load_cov_corr(
-    f'{DATAPATH}/MGGLAM/cov_wp_fiducial.npy', 
-    f'{DATAPATH}/MGGLAM/corrcoef_wp_fiducial.npy'
+cov_OLD, corr_OLD = load_cov_corr(
+    f'{OLD_DATAPATH}/cov_wp_small.npy', 
+    f'{OLD_DATAPATH}/corrcoef_wp_small.npy'
     )
 cov_sz, corr_sz = load_cov_corr(
     f'{DATAPATH}/cov_wp_small.npy', 
     f'{DATAPATH}/corrcoef_wp_small.npy'
     )
-cov_sz   /= 64.0 
-cov_GLAM /= 8.0
+cov_sz  /= 64.0 
+cov_OLD /= 64.0
 
-# check_cov(cov_sz)
-# check_cov(cov_GLAM)
+# check_cov(cov_sz, name="cov_sz")
+# check_cov(cov_OLD, name="cov_OLD")
 # plot_cov_cov_inv(cov_sz)
 # plot_corr(corr_sz)
-compare_cov_sz_and_cov_GLAM(cov_sz, cov_GLAM)
-# print(cov_GLAM[0])
+# compare_cov_sz_and_cov_OLD(cov_sz, cov_OLD)
 
 
