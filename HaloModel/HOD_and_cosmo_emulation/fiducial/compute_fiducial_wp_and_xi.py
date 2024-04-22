@@ -85,8 +85,8 @@ def compute_wp_of_s_z_from_HOD_catalogue(
 
 def compute_tpcf_from_HOD_catalogue(
         r_binedge:  np.ndarray,
-        r_min:      float       = 0.6,
-        r_max:      float       = 100.0,
+        r_min:      float       = 0.1,
+        r_max:      float       = 105.0,
         use_r_mask: bool        = True,
         threads:    int         = 128,
         ):
