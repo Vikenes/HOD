@@ -53,7 +53,7 @@ def plot_cov_cov_inv(cov):
         # fig.clf()
         plt.close(fig)
 
-def plot_corr(corr):
+def plot_corr_double(corr):
     fig = plt.figure(figsize=(12, 5))
     gs  = gridspec.GridSpec(1, 2,)
     ax0 = plt.subplot(gs[0])
@@ -79,6 +79,29 @@ def plot_corr(corr):
                     dpi=200)
         # fig.clf()
         plt.close(fig)
+
+def save_corr(corr, outpath="figures/thesis_figures"):
+    fig = plt.figure(figsize=(12, 12))
+    gs  = gridspec.GridSpec(1, 1,)
+    ax0 = plt.subplot(gs[0])
+
+
+    im0 = ax0.imshow(corr, origin="lower", cmap='viridis')
+    fig.colorbar(im0, fraction=0.046, pad=0.04)
+    ax0.set_xlabel("Bin number")
+    ax0.set_ylabel("Bin number")
+
+    figname_png = Path(f"{outpath}/corr.png")
+    figname_pdf = Path(f"{outpath}/corr.pdf")
+
+    print(f"saving {figname_png}")
+    fig.savefig(figname_png, 
+                bbox_inches="tight", 
+                dpi=200)
+    print(f"saving {figname_pdf}")
+    fig.savefig(figname_pdf, 
+                bbox_inches="tight")
+    plt.close(fig)
 
 def compare_cov_sz_and_cov_OLD(cov_NEW, cov_OLD):
     cov_inv_OLD = get_cov_inv(cov_OLD) # OLD
@@ -143,5 +166,6 @@ cov_OLD /= 64.0
 # plot_cov_cov_inv(cov_sz)
 # plot_corr(corr_sz)
 # compare_cov_sz_and_cov_OLD(cov_sz, cov_OLD)
+# save_corr(corr_sz)
 
 
