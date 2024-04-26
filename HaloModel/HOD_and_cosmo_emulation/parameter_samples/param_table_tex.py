@@ -303,7 +303,7 @@ def make_latex_table_cosmo(
         caption=caption,
         label=label,)
     
-    table_note = r"\multicolumn{4}{c}{\footnotesize Note: The fiducial values correspond to the \verb|c000| simulation.}"       
+    # table_note = r"\multicolumn{4}{c}{\footnotesize Note: The fiducial values correspond to the \verb|c000| simulation.}"       
 
     # Parse the lines of the latex table to modify it 
     if test:
@@ -325,13 +325,13 @@ def make_latex_table_cosmo(
                 if line.startswith(r"\end{tabular}"):
                     line = line.replace(r"\end{tabular}", r"\end{tabularx}")
                 f.write(line + "\n")
-                if line.startswith(r"\bottomrule"):
-                    f.write(table_note + "\n")
+                # if line.startswith(r"\bottomrule"):
+                    # f.write(table_note + "\n")
 
 
 
 if __name__ == "__main__":
     # make_latex_table_full()
-    make_latex_table_HOD(test=False)
+    # make_latex_table_HOD(test=False)
     make_latex_table_cosmo(test=False)
     
