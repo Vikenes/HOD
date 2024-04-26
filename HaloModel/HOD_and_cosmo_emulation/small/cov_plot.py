@@ -5,6 +5,19 @@ import matplotlib.pyplot as plt
 from matplotlib.colors import LogNorm 
 from matplotlib import gridspec
 
+
+import matplotlib
+matplotlib.rcParams['text.usetex'] = True
+matplotlib.rcParams.update({'font.size': 14})
+matplotlib.rcParams.update({'axes.labelsize': 20})
+# Increase size of axis numbers
+matplotlib.rcParams.update({'xtick.labelsize': 16})
+matplotlib.rcParams.update({'ytick.labelsize': 16})
+matplotlib.rcParams.update({'legend.fontsize': 16})
+matplotlib.rcParams['text.latex.preamble'] = r'\usepackage{amsmath}'
+params = {'xtick.top': True, 'ytick.right': True, 'xtick.direction': 'in', 'ytick.direction': 'in'}
+plt.rcParams.update(params)
+
 OLD_DATAPATH     = Path(f"/mn/stornext/d5/data/vetleav/HOD_AbacusData/OLD_inference_data")
 DATAPATH     = Path(f"/mn/stornext/d5/data/vetleav/HOD_AbacusData/inference_data")
 
@@ -81,7 +94,7 @@ def plot_corr_double(corr):
         plt.close(fig)
 
 def save_corr(corr, outpath="figures/thesis_figures"):
-    fig = plt.figure(figsize=(12, 12))
+    fig = plt.figure(figsize=(8, 8))
     gs  = gridspec.GridSpec(1, 1,)
     ax0 = plt.subplot(gs[0])
 
