@@ -10,12 +10,17 @@ import matplotlib
 import matplotlib.pyplot as plt
 from matplotlib import gridspec
 matplotlib.rcParams['text.usetex'] = True
-matplotlib.rcParams.update({'font.size': 12})
+# matplotlib.rcParams.update({'font.size': 12})
 matplotlib.rcParams['text.latex.preamble'] = r'\usepackage{amsmath}'
 # matplotlib.rcParams['text.latex.preamble'] = r'\usepackage{physics}'
 params = {'xtick.top': True, 'ytick.right': True, 'xtick.direction': 'in', 'ytick.direction': 'in'}
 plt.rcParams.update(params)
-
+matplotlib.rcParams.update({'font.size': 14})
+matplotlib.rcParams.update({'axes.labelsize': 20})
+# Increase size of axis numbers
+matplotlib.rcParams.update({'xtick.labelsize': 16})
+matplotlib.rcParams.update({'ytick.labelsize': 16})
+matplotlib.rcParams.update({'legend.fontsize': 16})
 
 
 FIDUCIAL_DATA_PATH  = Path("/mn/stornext/d5/data/vetleav/HOD_AbacusData/inference_data")
@@ -182,7 +187,6 @@ def plot_wp_from_sz(savefig=False):
     ax0.legend()
     ax0.set_xlabel(r'$r_{\perp} \quad [h^{-1}\mathrm{Mpc}]$')
     ax0.set_ylabel(r'$r_{\perp} w_{p}(r_{\perp}) \quad [h^{-2}\mathrm{Mpc}^2]$')
-    # ax0.set_title(r'$w_p$ from $r_{\perp}$ and $s_z$')
 
     figname_stem = "wp_data_vector"
     outfig_png = Path(f"thesis_figures/{figname_stem}.png")
@@ -207,4 +211,4 @@ def plot_wp_from_sz(savefig=False):
         )
 
 
-# plot_wp_from_sz(savefig=True)
+plot_wp_from_sz(savefig=True)
