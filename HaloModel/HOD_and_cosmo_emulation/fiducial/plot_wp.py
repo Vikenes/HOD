@@ -112,3 +112,99 @@ def plot_wp_from_sz_and_wp_from_xiR():
             pad_inches=0.05,
             dpi=200,
         )
+
+def plot_wp_from_sz(savefig=False):
+        
+    fig = plt.figure(figsize=(8, 6))
+    gs  = gridspec.GridSpec(1, 1,)
+    ax0 = plt.subplot(gs[0])
+
+    wp_file = h5py.File(wp_fname, "r")
+
+    r_perp_mean = wp_file["rp_mean"][:]
+    lw_ = 0.2
+    ms_ = 1
+    alpha_ = 0.5
+
+
+    for key in wp_file.keys():
+        if not key.startswith("Abacus"):
+            continue 
+
+        wp_group    = wp_file[key]
+        r_perp      = wp_group["r_perp"][:]
+        w_p         = wp_group["w_p"][:]
+
+        # Plot wp data and wp from xiR 
+        ax0.plot(
+            r_perp,
+            r_perp * w_p,
+            "x-",
+            lw=lw_,
+            ms=ms_,
+            c="blue",
+            alpha=alpha_,
+            )
+
+    # Make label for wp data and wp from xiR
+    ax0.plot(
+        [],
+        "x-",
+        lw=lw_*2,
+        ms=ms_,
+        c="blue",
+        alpha=alpha_*2,
+        label=r'Individual'
+        )
+
+    # Get mean and std of both wp's 
+    wp_mean     = wp_file["wp_mean"][:]
+    wp_stddev   = wp_file["wp_stddev"][:]
+    wp_file.close()
+    
+    # Plot mean of wp with errorbars from data and from xiR 
+    ax0.errorbar(
+        r_perp_mean,
+        r_perp_mean * wp_mean,
+        yerr=r_perp_mean * wp_stddev,
+        lw=0,
+        elinewidth=1.0,
+        marker='o',
+        markersize=3,
+        # barsabove=True,
+        capsize=2,
+        c="red",
+        label=r'Mean',
+        )
+
+    ax0.set_xscale("log")
+
+    ax0.legend()
+    ax0.set_xlabel(r'$r_{\perp} \quad [h^{-1}\mathrm{Mpc}]$')
+    ax0.set_ylabel(r'$r_{\perp} w_{p}(r_{\perp}) \quad [h^{-2}\mathrm{Mpc}^2]$')
+    # ax0.set_title(r'$w_p$ from $r_{\perp}$ and $s_z$')
+
+    figname_stem = "wp_data_vector"
+    outfig_png = Path(f"thesis_figures/{figname_stem}.png")
+    outfig_pdf = Path(f"thesis_figures/{figname_stem}.pdf")
+
+    if not savefig:
+        plt.tight_layout()
+        plt.show()
+    else:
+        print(f"Storing figure {outfig_png}")
+        plt.savefig(
+            outfig_png,
+            bbox_inches="tight",
+            pad_inches=0.05,
+            dpi=200,
+        )
+        print(f"Storing figure {outfig_pdf}")
+        plt.savefig(
+            outfig_pdf,
+            bbox_inches="tight",
+            pad_inches=0.05,
+        )
+
+
+# plot_wp_from_sz(savefig=True)
