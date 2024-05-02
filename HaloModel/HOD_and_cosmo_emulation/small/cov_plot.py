@@ -101,8 +101,8 @@ def save_corr(corr, outpath="figures/thesis_figures"):
 
     im0 = ax0.imshow(corr, origin="lower", cmap='viridis')
     fig.colorbar(im0, fraction=0.046, pad=0.04)
-    ax0.set_xlabel("Bin number")
-    ax0.set_ylabel("Bin number")
+    ax0.set_xlabel(r"$r_\perp \quad [h^{-1}\mathrm{Mpc}]$")
+    ax0.set_ylabel(r"$r_\perp \quad [h^{-1}\mathrm{Mpc}]$")
 
     figname_png = Path(f"{outpath}/corr.png")
     figname_pdf = Path(f"{outpath}/corr.pdf")
