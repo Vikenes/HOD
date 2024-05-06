@@ -64,8 +64,10 @@ def store_cosmo_params_prior_range_csv():
 def get_cosmo_params_prior_range():
     cosmo_params_file = Path("./cosmo_param_limits.csv")
     if not cosmo_params_file.exists():
-        store_cosmo_params_prior_range_csv()
-    df = pd.read_csv("cosmo_param_limits.csv").to_dict(orient="list")
+        cosmo_params_file = Path("/uio/hume/student-u74/vetleav/Documents/thesis/HOD/HaloModel/HOD_and_cosmo_emulation/parameter_samples/cosmo_param_limits.csv")
+        if not cosmo_params_file.exists():
+            store_cosmo_params_prior_range_csv()
+    df = pd.read_csv(cosmo_params_file).to_dict(orient="list")
     return df 
 
 
