@@ -6,7 +6,7 @@ from HOD_and_cosmo_prior_ranges import get_fiducial_HOD_params, get_HOD_params_p
 
 import matplotlib
 matplotlib.rcParams['text.usetex'] = True
-matplotlib.rcParams.update({'font.size': 14})
+matplotlib.rcParams.update({'font.size': 18})
 matplotlib.rcParams['text.latex.preamble'] = r'\usepackage{amsmath}'
 params = {'xtick.top': True, 
           'ytick.right': True, 
@@ -68,10 +68,8 @@ def plot_varying_log10_Mmin_Nc():
         ax.plot([], [],  color=colors[ii],    label=fr"$\sigma_{{\log{{M}}}}={sigma_logM_lst[ii]:.3f}$ {label_str[ii]}")
 
 
-    ax.text(11.9, 0.5, fr"$\log (M_\mathrm{{min}} / (\mathrm{{M}}_\odot\, h^{{-1}}))={log10_Mmin_array[0]:.0f}$")
-
-
-    ax.text(14.05, 0.47, fr"$\log (M_\mathrm{{min}} / (\mathrm{{M}}_\odot\, h^{{-1}}))={log10_Mmin_array[1]:.0f}$")
+    ax.text(11.7, 0.5, fr"$\log (M_\mathrm{{min}} / (\mathrm{{M}}_\odot\, h^{{-1}}))={log10_Mmin_array[0]:.0f}$", fontsize=16)
+    ax.text(13.9, 0.35, fr"$\log (M_\mathrm{{min}} / (\mathrm{{M}}_\odot\, h^{{-1}}))={log10_Mmin_array[1]:.0f}$", fontsize=16)
 
 
     ax.set_xlabel(r"$\log(M / (\mathrm{M}_\odot\, h^{-1})) $")
@@ -98,7 +96,9 @@ def plot_varying_log10_Mmin_Nc():
         )
 
 global SAVE
-SAVE = True
+# SAVE = True
+SAVE = False
+
 
 
 plot_varying_log10_Mmin_Nc()
