@@ -105,3 +105,6 @@ def get_fiducial_HOD_params():
 def get_fiducial_cosmo_params():
     FIDUCIAL_cosmo_params   = pd.read_csv(f"{FIDUCIAL_PATH}/cosmological_parameters.dat", sep=" ")
     return FIDUCIAL_cosmo_params.iloc[0].to_dict()
+
+if __name__ == "__main__":
+    print(get_cosmo_params_prior_range())
