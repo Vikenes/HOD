@@ -67,7 +67,9 @@ def plot_log10Mmin():
     """
     Make histogram showing the distribution of log10Mmin for each dataset
     """
-    fig, ax = plt.subplots()
+    fig, ax = plt.subplots(figsize=(8, 4))
+    # print(fig.get_size_inches(6, 5))
+    # exit()
     flags = {
         "train": "Training/5",
         "test": "Testing",
@@ -78,6 +80,12 @@ def plot_log10Mmin():
         "test":  1.0,
         "val":   1.0,
     }
+
+    colors = {
+        "train": "blue",
+        "test":  "red",
+        "val":   "green",
+    }
     for flag in DATASET_NAMES:
         HOD_params = pd.read_csv(f"HOD_params_{flag}.csv")
 
@@ -86,6 +94,7 @@ def plot_log10Mmin():
             bins=50, 
             histtype="step", 
             weights=np.ones_like(HOD_params["log10Mmin"]) * weight_factors[flag],
+            color=colors[flag],
             label=flags[flag],
             )
     
@@ -113,6 +122,8 @@ def plot_log10Mmin():
         )
 
 global SAVEFIG
-SAVEFIG = True
+SAVEFIG = False
+# SAVEFIG = True
+
 
 plot_log10Mmin()
