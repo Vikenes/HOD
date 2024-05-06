@@ -159,8 +159,8 @@ def plot_parameters(savefig=False):
         plt.show()
     else:
         figname_stem = "cosmo_params_train_test_val_fiducial"
-        outfig_png = Path(f"plots/thesis_figures/{figname_stem}.png")
-        outfig_pdf = Path(f"plots/thesis_figures/{figname_stem}.pdf")
+        outfig_png = Path(f"plots/thesis_figures_cosmo/{figname_stem}.png")
+        outfig_pdf = Path(f"plots/thesis_figures_cosmo/{figname_stem}.pdf")
 
         print(f"Storing figure {outfig_png}")
         plt.savefig(
