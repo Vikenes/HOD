@@ -63,7 +63,7 @@ def plot_varying_log10_Mmin_Nc():
                 alpha=0.7,
                 color=colors[jj_sigma], 
                 )
-    label_str = ["$\mathrm{(Min. prior)}$", "$\mathrm{(Max. prior)}$", ""]
+    label_str = ["$\mathrm{(Min.\: prior)}$", "$\mathrm{(Max.\: prior)}$", ""]
     for ii in range(3):
         ax.plot([], [],  color=colors[ii],    label=fr"$\sigma_{{\log{{M}}}}={sigma_logM_lst[ii]:.3f}$ {label_str[ii]}")
 
