@@ -127,13 +127,12 @@ def plot_parameters(savefig=False):
                 )
 
                 if ii == gridsize-1:
-                    ax.set_xlabel(COSMO_PARAM_LABELS[COSMO_PARAM_NAMES[jj]], rotation=45, ha="right")
+                    ax.set_xlabel(COSMO_PARAM_LABELS[COSMO_PARAM_NAMES[jj]])
 
                     ax.xaxis.set_major_locator(plt.MaxNLocator(3))
                     # Rotate xtick numbers by 45 degrees
                     for tick in ax.get_xticklabels():
                         tick.set_rotation(45)
-                        tick.set_ha("right")
                 else:
                     ax.set_xticklabels([])
                 if jj == 0:
@@ -178,4 +177,4 @@ def plot_parameters(savefig=False):
             pad_inches=0.05,
         )
 
-# plot_parameters(savefig=False)
+plot_parameters(savefig=False)
