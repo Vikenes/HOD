@@ -65,7 +65,12 @@ def plot_varying_log10_Mmin_Nc():
                 )
     label_str = ["$\mathrm{(Min.\: prior)}$", "$\mathrm{(Max.\: prior)}$", ""]
     for ii in range(3):
-        ax.plot([], [],  color=colors[ii],    label=fr"$\sigma_{{\log{{M}}}}={sigma_logM_lst[ii]:.3f}$ {label_str[ii]}")
+        if ii != 2:
+            sigma_val = f"{sigma_logM_lst[ii]:.3f}"
+        else:
+            sigma_val = f"{sigma_logM_lst[ii]:.2f}"
+
+        ax.plot([], [],  color=colors[ii],    label=fr"$\sigma_{{\log{{M}}}}={sigma_val}$ {label_str[ii]}")
 
 
     ax.text(11.7, 0.5, fr"$\log (M_\mathrm{{min}} / (\mathrm{{M}}_\odot\, h^{{-1}}))={log10_Mmin_array[0]:.0f}$", fontsize=16)
