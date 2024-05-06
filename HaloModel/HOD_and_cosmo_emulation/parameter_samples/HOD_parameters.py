@@ -21,17 +21,24 @@ params = {'xtick.top': True,
 plt.rcParams.update(params)
 
 DATAPATH            = Path("/mn/stornext/d13/euclid_nobackup/halo/AbacusSummit/emulation_files")
+D5_PATH             = Path("/mn/stornext/d5/data/vetleav/emulation_data/TPCF_HOD_and_cosmo")
 
 DATASET_NAMES       = ["train", "test", "val"]
 HOD_PARAM_NAMES     = ["alpha", "kappa", "log10M1", "log10Mmin", "sigma_logM", "log10_ng"]
 
 
-N_SIMS = len([simulation for simulation in DATAPATH.glob("AbacusSummit*")])
-
 def save_HOD_params():
     """
     Store HOD_parameters_{flag}. csv files for each flag  
     """
+    # Get the simulations used for each dataset
+
+    dataset_simulations = {}
+    for flag in DATASET_NAMES:
+        fff = h5py.File(D5_PATH / f"TPCF_{flag}.hdf5", "r")
+        dataset_simulations[flag] = list(fff.keys())
+        fff.close()
+
     for flag in DATASET_NAMES:
         # Loop over flag. Skip file if exists 
         outfile     = Path(f"./HOD_params_{flag}.csv")
@@ -39,18 +46,14 @@ def save_HOD_params():
             print(f"{outfile} already exists, skipping")
             continue
 
-        # Empty dataframe to fill with HOD parameters
         HOD_params = pd.DataFrame()
-        for simulation in DATAPATH.glob("AbacusSummit*"):
-            # Loop over all simulations
-            if not Path(simulation / "HOD_parameters" / f"HOD_parameters_{flag}.csv").exists():
-                # Skip simulation if it doesn't contain data for this flag
-                continue 
-
+        # Loop over all simulations
+        for simulation in dataset_simulations[flag]:
             # Concatenate HOD parameters from simulations
-            HOD_params = pd.concat([HOD_params, pd.read_csv(simulation / "HOD_parameters" / f"HOD_parameters_{flag}.csv")])
+            HOD_params = pd.concat([HOD_params, pd.read_csv(DATAPATH / f"{simulation}/HOD_parameters/HOD_parameters_{flag}.csv")])
         
         # Save HOD parameters to file
+        # old = pd.read_csv(f"./HOD_params_{flag}.csv")
         HOD_params.to_csv(outfile, index=False)
 
 def save_combined_HOD_params():
@@ -66,14 +69,25 @@ def plot_log10Mmin():
     """
     fig, ax = plt.subplots()
     flags = {
-        "train": "Training",
+        "train": "Training/5",
         "test": "Testing",
         "val": "Validation",
+    }
+    weight_factors = {
+        "train": 0.2, #1./3.,
+        "test":  1.0,
+        "val":   1.0,
     }
     for flag in DATASET_NAMES:
         HOD_params = pd.read_csv(f"HOD_params_{flag}.csv")
 
-        ax.hist(HOD_params["log10Mmin"], bins=100, histtype="step", label=flags[flag])
+        ax.hist(
+            HOD_params["log10Mmin"], 
+            bins=50, 
+            histtype="step", 
+            weights=np.ones_like(HOD_params["log10Mmin"]) * weight_factors[flag],
+            label=flags[flag],
+            )
     
     ax.legend()
     ax.set_xlabel(r"$\log{M_\mathrm{min}}$")
@@ -99,6 +113,6 @@ def plot_log10Mmin():
         )
 
 global SAVEFIG
-SAVEFIG = False
+SAVEFIG = True
 
 plot_log10Mmin()
