@@ -332,6 +332,6 @@ def make_latex_table_cosmo(
 
 if __name__ == "__main__":
     # make_latex_table_full()
-    # make_latex_table_HOD(test=False)
-    make_latex_table_cosmo(test=False)
+    make_latex_table_HOD(outpath="/uio/hume/student-u74/vetleav/Documents/thesis/ProjectedCorrelationFunctionArticle/tables", test=False)
+    make_latex_table_cosmo(outpath="/uio/hume/student-u74/vetleav/Documents/thesis/ProjectedCorrelationFunctionArticle/tables", test=False)
     
