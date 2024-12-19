@@ -1,5 +1,15 @@
 # Generating galaxy catalogues from Abacus data
 
+
+ - **parameter_samples/**
+     - `central_occupation_distr_for_logMmin_13.py`: Plots N_c(M) (Fig. A.2 in thesis) for different values of sigma_logM and M_min, to confirm that a cutoff mass of M=12 solar masses was a reasonable choice. 
+     - `plot_cosmo_params.py`: Make corner plot of cosmological parameters used in the emulator.
+     - `param_table_tex.py`: Creates latex tables for HOD+cosmo prior ranges. 
+     - `make_param_prioirs_yaml_file.py`: makes yaml file for HOD and cosmo priors. **used in MCMC**.
+     - `HOD_parameters.py`: Creates csv files *HOD_params_{flag}.csv* for train, test, val, containing all HOD params in each dataset, with each HOD param as key. Also creates histogram (Fig. A.1 in thesis) of number of samples with different M_min values. 
+     - `HOD_and_cosmo_prior_ranges.py`: Script for storing the HOD and cosmo prior ranges. Includes function for retrieving this priors, as well as the fiducial values. **May be used for inference analyzis. Will check soon**. 
+     
+
 Galaxy catalogues are created with the script `make_HOD.py`. Starting with Abacus simulation data, and provided that the prerequisites are in place, galaxy catalogues are generated via the following pipeline:
 
 0. `make_fiducial_xi_sample.py`: Performs steps 1.-3. in the list below for the fiducial $\Lambda\mathrm{CDM}$ cosmology and the central values of the HOD parameters, to be used as a fiducial data set during emulation. 
