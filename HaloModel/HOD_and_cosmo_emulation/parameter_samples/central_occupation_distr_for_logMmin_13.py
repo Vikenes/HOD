@@ -16,6 +16,11 @@ params = {'xtick.top': True,
 plt.rcParams.update(params)
 
 
+"""
+Plots N_c (Fig. A.2 in thesis) for different values of sigma_logM and M_min.
+Used to confirm that a cutoff mass of M=12 solar masses was a reasonable choice. 
+"""
+
 def N_c(logM, alpha, kappa, sigma_logM, logMmin, logM1):
     erf_term = erf((logM - logMmin)/sigma_logM)
     return 0.5*(1.0 + erf_term)
