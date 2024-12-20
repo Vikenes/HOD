@@ -28,6 +28,17 @@ def train_test_val_paths_split(
         split_by_percent:   int = 0.8,
         seed:               int = 42,
         ):
+    """
+    Assign data from different simulations to training, testing and validation.
+     - Test data are the 25 C000 simulations and the C001-C004 simulations.
+     - With split_by_percent=0.8, 80% of the LIN_DER_GRID+BROAD_EMUL_GRID simulations are used for training.
+       The remaining 20% are used for validation.
+     - With split_by_percent=None, BROAD_EMUL_GRID + random half of LIN_DER_GRID simulations are used for training
+       the other half of LIN_DER_GRID is used for validation.
+
+    
+    The paths returned are /mn/stornext/d13/euclid_nobackup/halo/AbacusSummit/emulation_files/AbacusSummit_base_cXXX_phYYY
+    """
     # Get path to emulation data from a simulation, given version and phase
     def get_version_path_list(
             version_low:  int  = 0, 
@@ -145,7 +156,7 @@ def make_TPCF_hdf5_files_full(
             # Load data from all simulations
             for SIMULATION_PATH in SIMULATION_FLAG_PATHS[flag]:
 
-                # Create group for each simulation
+                # Create group for each simulation named "AbacusSummit_base_cXXX_phYYY"
                 # Each group contains the same cosmological parameters
                 fff_cosmo  = fff_flag.create_group(SIMULATION_PATH.name)
                 
