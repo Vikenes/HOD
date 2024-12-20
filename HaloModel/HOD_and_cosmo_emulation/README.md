@@ -20,10 +20,26 @@ Most scripts in this directory (not referring to scripts in subdirectories) does
 
 
 ### Scripts to run 
-The script `make_tpcf_emulation_data_files.py` is essentially ready to go. The output from these were stored in d5, and are hence deleted. 
-The script does the following:
+The script `make_tpcf_emulation_data_files.py` is essentially ready to go. The output from these were stored in d5, and are hence deleted. Once this has been run, emulation can begin. 
+
+The script does the following (see script doc. for detailed expl.):
  - Creates various hdf5 files "TPCF_{flag}.hdf5" with TPCF(r,C,G). These are used to obtain parameter priors (see parameter_samples/ paragraph).
  - Create csv files from the hdf5 files, which are the input data used during emulation.
+
+
+## Subdirectories
+
+### fiducial/
+Contains data with fiducial C+G values. **Needed to run inference**.
+
+The scripts are:
+ - `store_fiducial_HOD_parameters.py`: Generates the csv files containing fid. HOD param. values. Used to make fiducial halocat. Output found in:
+     - `/mn/stornext/d13/euclid_nobackup/halo/AbacusSummit/emulation_files/fiducial_data/HOD_parameters_fiducial.csv`
+     - `/mn/stornext/d13/euclid_nobackup/halo/AbacusSummit/emulation_files/Abacus_XXX/HOD_parameters/HOD_parameters_fiducial.csv` (Not sure when these are used, or why)
+ - `make_fiducial_HOD.py`: Creates a halocat for the fid. params. Output stored in: `/mn/stornext/d13/euclid_nobackup/halo/AbacusSummit/emulation_files/fiducial_data/halocat_fiducial.hdf5`  
+ - `compute_fiducial_wp_and_xi.py`: Compute xi and wp from fiducial values. Although the fiducial halocat appears to exist in d13 (I can't check), it appears to load the cat. from d5. Should be easy to fix/rerun the above script. 
+
+
 
 ### parameter_samples/
 This subdirectory contains script for various parameter investigations. Some scripts only concern plotting and studying the effects of single parameter variations etc. 
