@@ -85,7 +85,6 @@ def make_csv_files(
                 num_test nodes for testing,
                 num_val nodes for validation.
 
-    If fix_ng=True, log10Mmin is estimated such that the galaxy number density becomes ng_desired.
     """
 
 
