@@ -37,7 +37,7 @@ The scripts are:
      - `/mn/stornext/d13/euclid_nobackup/halo/AbacusSummit/emulation_files/fiducial_data/HOD_parameters_fiducial.csv`
      - `/mn/stornext/d13/euclid_nobackup/halo/AbacusSummit/emulation_files/Abacus_XXX/HOD_parameters/HOD_parameters_fiducial.csv` (Not sure when these are used, or why)
  - `make_fiducial_HOD.py`: Creates a halocat for the fid. params. Output stored in: `/mn/stornext/d13/euclid_nobackup/halo/AbacusSummit/emulation_files/fiducial_data/halocat_fiducial.hdf5`  
- - `compute_fiducial_wp_and_xi.py`: Compute xi and wp from fiducial values. Although the fiducial halocat appears to exist in d13 (I can't check), it appears to load the cat. from d5. Should be easy to fix/rerun the above script. 
+ - `compute_fiducial_wp_and_xi.py`: Compute xi and wp from fiducial values. Although the fiducial halocat appears to exist in d13 (I can't check), it appears to load the cat. from d5. Should be easy to fix/rerun the above script. The output was stored in d5. **Output needed for inference**.
 
 
 
