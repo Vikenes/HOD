@@ -9,6 +9,10 @@ OUTPATH             = Path("/mn/stornext/d5/data/vetleav/HOD_AbacusData/inferenc
 HOD_PARAM_NAMES     = ["log10M1", "sigma_logM", "kappa", "alpha", "log10_ng"]
 COSMO_PARAM_NAMES   = ['N_eff', 'alpha_s', 'ns', 'sigma8', 'w0', 'wa', 'wb', 'wc']
 
+"""
+Generate a yaml file with the prior ranges of the HOD and cosmological parameters.
+This file is used in the inference code to set the prior ranges of the parameters.
+"""
 
 def make_priors_config_file():
 
